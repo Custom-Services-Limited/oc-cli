@@ -18,9 +18,6 @@
     ],
     "git-version": "package_version",
     "datetime": "package_datetime",
-    "php": {
-        "min": "7.0.0"
-    },
     "compactors": [
         "KevinGH\\Box\\Compactor\\Php"
     ],
