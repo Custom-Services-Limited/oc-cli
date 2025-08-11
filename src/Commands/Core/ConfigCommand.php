@@ -256,11 +256,10 @@ class ConfigCommand extends Command
         $prefix = $config['db_prefix'];
         $table = $prefix . 'setting';
 
-        $group = $isAdmin ? 'config' : 'config';
         $store_id = 0;
 
-        $query = "SELECT `key`, `value` FROM `{$table}` WHERE `code` = ? AND `store_id` = ? ORDER BY `key`";
-        $result = $this->query($query, [$group, $store_id]);
+        $query = "SELECT `key`, `value` FROM `{$table}` WHERE `store_id` = ? ORDER BY `key`";
+        $result = $this->query($query, [$store_id]);
 
         if (!$result) {
             return null;
