@@ -1,7 +1,8 @@
 <?php
+
 /**
  * OC-CLI - OpenCart Command Line Interface
- * 
+ *
  * @author    Custom Services Limited <info@opencartgreece.gr>
  * @copyright 2024 Custom Services Limited
  * @license   GPL-3.0-or-later
@@ -14,12 +15,14 @@ namespace OpenCart\CLI;
 use Symfony\Component\Console\Application as BaseApplication;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Input\ArrayInput;
+use Symfony\Component\Console\Output\BufferedOutput;
 use OpenCart\CLI\Commands\Core\VersionCommand;
 
 class Application extends BaseApplication
 {
-    const VERSION = '1.0.0';
-    const NAME = 'OC-CLI';
+    public const VERSION = '1.0.0';
+    public const NAME = 'OC-CLI';
 
     public function __construct()
     {
@@ -33,10 +36,10 @@ class Application extends BaseApplication
      *
      * @return array
      */
-    protected function getDefaultCommands()
+    protected function getDefaultCommands(): array
     {
         $commands = parent::getDefaultCommands();
-        
+
         $commands[] = new VersionCommand();
 
         return $commands;
@@ -63,8 +66,18 @@ class Application extends BaseApplication
      * @param OutputInterface $output
      * @return int
      */
-    public function run(InputInterface $input = null, OutputInterface $output = null)
+    public function run(InputInterface $input = null, OutputInterface $output = null): int
     {
+        // In test environment, ensure we have proper input/output to prevent hanging
+        if (getenv('APP_ENV') === 'testing') {
+            if ($input === null) {
+                $input = new ArrayInput(['command' => 'list']);
+            }
+            if ($output === null) {
+                $output = new BufferedOutput();
+            }
+        }
+
         return parent::run($input, $output);
     }
 
@@ -101,7 +114,7 @@ class Application extends BaseApplication
     public function getOpenCartRoot($startPath = '.')
     {
         $path = realpath($startPath);
-        
+
         while ($path && $path !== '/') {
             if ($this->detectOpenCart($path)) {
                 return $path;

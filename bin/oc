@@ -22,5 +22,10 @@ if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
 
 use OpenCart\CLI\Application;
 
+// Prevent execution during testing
+if (defined('PHPUNIT_COMPOSER_INSTALL') || getenv('APP_ENV') === 'testing') {
+    return;
+}
+
 $app = new Application();
 $app->run();

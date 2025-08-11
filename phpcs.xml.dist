@@ -1,0 +1,60 @@
+<?xml version="1.0"?>
+<ruleset name="OC-CLI Coding Standard">
+    <description>Coding standard for OC-CLI project</description>
+
+    <!-- Show progress and sniff codes -->
+    <arg value="p"/>
+    <arg value="s"/>
+    <arg name="colors"/>
+
+    <!-- Check all files in src and tests directories -->
+    <file>src/</file>
+    <file>tests/</file>
+
+    <!-- Exclude vendor directory -->
+    <exclude-pattern>*/vendor/*</exclude-pattern>
+    <exclude-pattern>*/build/*</exclude-pattern>
+
+    <!-- Use PSR12 coding standard as base -->
+    <rule ref="PSR12"/>
+
+    <!-- Additional rules -->
+    <rule ref="Generic.Arrays.DisallowLongArraySyntax"/>
+    <rule ref="Generic.Commenting.Todo"/>
+    <rule ref="Generic.PHP.DeprecatedFunctions"/>
+    <rule ref="Generic.PHP.ForbiddenFunctions"/>
+    
+    <!-- Method and class naming -->
+    <rule ref="PSR1.Methods.CamelCapsMethodName"/>
+    <rule ref="PSR1.Classes.ClassDeclaration"/>
+
+    <!-- Control structure spacing -->
+    <rule ref="PSR2.ControlStructures.ControlStructureSpacing"/>
+    <rule ref="PSR2.ControlStructures.ElseIfDeclaration"/>
+
+    <!-- File naming -->
+    <rule ref="PSR1.Files.SideEffects"/>
+
+    <!-- Line length -->
+    <rule ref="Generic.Files.LineLength">
+        <properties>
+            <property name="lineLimit" value="120"/>
+            <property name="absoluteLineLimit" value="200"/>
+        </properties>
+    </rule>
+
+    <!-- Disable specific rules that might be too strict for CLI applications -->
+    <rule ref="PSR12.Files.FileHeader">
+        <exclude-pattern>tests/*</exclude-pattern>
+    </rule>
+
+    <!-- Allow longer lines in test files due to test method names -->
+    <rule ref="Generic.Files.LineLength.TooLong">
+        <exclude-pattern>tests/*</exclude-pattern>
+    </rule>
+
+    <!-- Custom sniffs for this project -->
+    <rule ref="Generic.Commenting.DocComment">
+        <exclude-pattern>tests/*</exclude-pattern>
+    </rule>
+</ruleset>

@@ -1,7 +1,8 @@
 <?php
+
 /**
  * OC-CLI - OpenCart Command Line Interface
- * 
+ *
  * @author    Custom Services Limited <info@opencartgreece.gr>
  * @copyright 2024 Custom Services Limited
  * @license   GPL-3.0-or-later
@@ -97,8 +98,7 @@ abstract class Command extends BaseCommand
             return null;
         }
 
-        $config = [];
-        include $configFile;
+        include_once $configFile;
 
         return [
             'db_hostname' => defined('DB_HOSTNAME') ? DB_HOSTNAME : null,
@@ -188,11 +188,11 @@ abstract class Command extends BaseCommand
     protected function formatBytes($bytes, $precision = 2)
     {
         $units = ['B', 'KB', 'MB', 'GB', 'TB'];
-        
-        for ($i = 0; $bytes > 1024 && $i < count($units) - 1; $i++) {
+
+        for ($i = 0; $bytes >= 1024 && $i < count($units) - 1; $i++) {
             $bytes /= 1024;
         }
-        
+
         return round($bytes, $precision) . ' ' . $units[$i];
     }
 }

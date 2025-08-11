@@ -1,7 +1,8 @@
 <?php
+
 /**
  * OC-CLI - OpenCart Command Line Interface
- * 
+ *
  * @author    Custom Services Limited <info@opencartgreece.gr>
  * @copyright 2024 Custom Services Limited
  * @license   GPL-3.0-or-later
@@ -115,7 +116,7 @@ class VersionCommand extends Command
         $versionFile = $this->openCartRoot . '/system/startup.php';
         if (file_exists($versionFile)) {
             $content = file_get_contents($versionFile);
-            
+
             if (preg_match("/define\s*\(\s*['\"]VERSION['\"],\s*['\"]([^'\"]+)['\"]\s*\)/", $content, $matches)) {
                 return $matches[1];
             }
@@ -124,7 +125,7 @@ class VersionCommand extends Command
         $indexFile = $this->openCartRoot . '/index.php';
         if (file_exists($indexFile)) {
             $content = file_get_contents($indexFile);
-            
+
             if (preg_match("/define\s*\(\s*['\"]VERSION['\"],\s*['\"]([^'\"]+)['\"]\s*\)/", $content, $matches)) {
                 return $matches[1];
             }
@@ -140,7 +141,13 @@ class VersionCommand extends Command
                 $files = glob($dir . '/*.php');
                 foreach ($files as $file) {
                     $content = file_get_contents($file);
-                    if (preg_match("/define\s*\(\s*['\"]VERSION['\"],\s*['\"]([^'\"]+)['\"]\s*\)/", $content, $matches)) {
+                    if (
+                        preg_match(
+                            "/define\s*\(\s*['\"]VERSION['\"],\s*['\"]([^'\"]+)['\"]\s*\)/",
+                            $content,
+                            $matches
+                        )
+                    ) {
                         return $matches[1];
                     }
                 }
@@ -158,7 +165,7 @@ class VersionCommand extends Command
     protected function displayTable($versions)
     {
         $this->io->title('Version Information');
-        
+
         $rows = [];
         foreach ($versions as $component => $version) {
             $rows[] = [ucfirst($component), $version];
