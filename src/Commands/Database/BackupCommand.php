@@ -78,7 +78,7 @@ class BackupCommand extends Command
 
         // Add .gz extension if compressing
         $compress = $this->input->getOption('compress');
-        if ($compress && !str_ends_with($filename, '.gz')) {
+        if ($compress && substr($filename, -3) !== '.gz') {
             $filename .= '.gz';
         }
 

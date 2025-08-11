@@ -115,7 +115,7 @@ class RestoreCommand extends Command
         $ignoreErrors = $this->input->getOption('ignore-errors');
 
         // Determine if file is compressed
-        $isCompressed = str_ends_with($filename, '.gz');
+        $isCompressed = substr($filename, -3) === '.gz';
 
         // Open file handle
         $handle = $isCompressed ? gzopen($filename, 'r') : fopen($filename, 'r');
@@ -148,7 +148,7 @@ class RestoreCommand extends Command
             $line = trim($line);
 
             // Skip empty lines and comments
-            if (empty($line) || str_starts_with($line, '--') || str_starts_with($line, '/*')) {
+            if (empty($line) || substr($line, 0, 2) === '--' || substr($line, 0, 2) === '/*') {
                 continue;
             }
 
@@ -156,7 +156,7 @@ class RestoreCommand extends Command
             $queryBuffer .= $line;
 
             // Check if query is complete (ends with semicolon)
-            if (str_ends_with($line, ';')) {
+            if (substr($line, -1) === ';') {
                 $query = trim($queryBuffer);
                 $queryBuffer = '';
 

@@ -51,6 +51,12 @@
         "test:ci": "./vendor/bin/phpunit --coverage-clover build/clover.xml",
         "cs-check": "./vendor/bin/phpcs --standard=PSR12 src/ tests/",
         "cs-fix": "./vendor/bin/phpcbf --standard=PSR12 src/ tests/",
-        "analyze": "./vendor/bin/phpstan analyse src/"
+        "analyze": "./vendor/bin/phpstan analyse src/",
+        "ready-for-deploy": [
+            "./vendor/bin/phpunit",
+            "./vendor/bin/phpcbf --standard=PSR12 src/ tests/",
+            "./vendor/bin/phpcs --standard=PSR12 src/ tests/",
+            "./vendor/bin/phpstan analyse src/"
+        ]
     }
 }
