@@ -340,7 +340,6 @@ When adding new commands or features:
 ## Getting Help
 
 - **Issues**: [GitHub Issues](https://github.com/Custom-Services-Limited/oc-cli/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/Custom-Services-Limited/oc-cli/discussions)
 - **Professional Support**: [Custom Services Limited](https://support.opencartgreece.gr/)
 
 ## License
