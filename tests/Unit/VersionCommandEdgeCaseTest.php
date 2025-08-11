@@ -82,11 +82,11 @@ class VersionCommandEdgeCaseTest extends TestCase
 
                 $this->assertEquals(0, $this->commandTester->getStatusCode());
                 $output = $this->commandTester->getDisplay();
-                
+
                 // Extract expected version from the format
                 preg_match("/['\"]([^'\"]+)['\"]/", $versionFormat, $matches);
                 $expectedVersion = $matches[1];
-                
+
                 $this->assertEquals($expectedVersion . "\n", $output);
             } finally {
                 chdir($originalDir);
@@ -163,11 +163,11 @@ class VersionCommandEdgeCaseTest extends TestCase
 
         $this->assertEquals(0, $this->commandTester->getStatusCode());
         $output = $this->commandTester->getDisplay();
-        
+
         // Should contain table headers
         $this->assertStringContainsString('Component', $output);
         $this->assertStringContainsString('Version', $output);
-        
+
         // Should contain various components
         $this->assertStringContainsString('Oc-cli', $output);
         $this->assertStringContainsString('Php', $output);
@@ -181,7 +181,7 @@ class VersionCommandEdgeCaseTest extends TestCase
 
         $this->assertEquals(0, $this->commandTester->getStatusCode());
         $output = $this->commandTester->getDisplay();
-        
+
         $json = json_decode($output, true);
         $this->assertIsArray($json);
         $this->assertEquals('Not detected', $json['opencart']);
@@ -193,7 +193,7 @@ class VersionCommandEdgeCaseTest extends TestCase
 
         $this->assertEquals(0, $this->commandTester->getStatusCode());
         $output = $this->commandTester->getDisplay();
-        
+
         $this->assertStringContainsString('opencart: Not detected', $output);
     }
 
@@ -203,7 +203,7 @@ class VersionCommandEdgeCaseTest extends TestCase
 
         $this->assertEquals(0, $this->commandTester->getStatusCode());
         $output = $this->commandTester->getDisplay();
-        
+
         // Should default to table format
         $this->assertStringContainsString('Version Information', $output);
         $this->assertStringContainsString('Component', $output);
@@ -224,7 +224,7 @@ class VersionCommandEdgeCaseTest extends TestCase
 
             $this->assertEquals(0, $this->commandTester->getStatusCode());
             $output = $this->commandTester->getDisplay();
-            
+
             $json = json_decode($output, true);
             $this->assertIsArray($json);
             $this->assertArrayHasKey('opencart', $json);

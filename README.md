@@ -55,6 +55,9 @@ source ~/.bashrc
 
 ## Quick Start
 
+Screenshot:
+![alt text](screenshots/image1.png)
+
 1. Navigate to your OpenCart installation directory:
 ```bash
 cd /path/to/your/opencart

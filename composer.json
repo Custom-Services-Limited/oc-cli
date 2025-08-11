@@ -44,13 +44,13 @@
     "minimum-stability": "stable",
     "prefer-stable": true,
     "scripts": {
-        "test": "phpunit",
-        "test:unit": "phpunit --testsuite=unit",
-        "test:integration": "phpunit --testsuite=integration",
-        "test:coverage": "phpunit --coverage-html build/coverage",
-        "test:ci": "phpunit --coverage-clover build/clover.xml",
-        "cs-check": "phpcs --standard=PSR12 src/ tests/",
-        "cs-fix": "phpcbf --standard=PSR12 src/ tests/",
-        "analyze": "phpstan analyse src/ --level=5"
+        "test": "./vendor/bin/phpunit",
+        "test:unit": "./vendor/bin/phpunit tests/Unit",
+        "test:integration": "./vendor/bin/phpunit tests/Integration",
+        "test:coverage": "./vendor/bin/phpunit --coverage-html build/coverage",
+        "test:ci": "./vendor/bin/phpunit --coverage-clover build/clover.xml",
+        "cs-check": "./vendor/bin/phpcs --standard=PSR12 src/ tests/",
+        "cs-fix": "./vendor/bin/phpcbf --standard=PSR12 src/ tests/",
+        "analyze": "./vendor/bin/phpstan analyse src/ --level=5"
     }
 }
