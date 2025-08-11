@@ -20,6 +20,9 @@ use Symfony\Component\Console\Output\BufferedOutput;
 use OpenCart\CLI\Commands\Core\VersionCommand;
 use OpenCart\CLI\Commands\Core\CheckRequirementsCommand;
 use OpenCart\CLI\Commands\Core\ConfigCommand;
+use OpenCart\CLI\Commands\Database\InfoCommand;
+use OpenCart\CLI\Commands\Database\BackupCommand;
+use OpenCart\CLI\Commands\Database\RestoreCommand;
 
 class Application extends BaseApplication
 {
@@ -53,6 +56,9 @@ class Application extends BaseApplication
         $commands[] = new VersionCommand();
         $commands[] = new CheckRequirementsCommand();
         $commands[] = new ConfigCommand();
+        $commands[] = new InfoCommand();
+        $commands[] = new BackupCommand();
+        $commands[] = new RestoreCommand();
 
         return $commands;
     }
