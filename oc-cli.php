@@ -1,0 +1,30 @@
+<?php
+/**
+ * OC-CLI - OpenCart Command Line Interface
+ * Alternative Entry Point
+ * 
+ * This file can be used as an alternative entry point for running OC-CLI
+ * when the bin/oc script is not available or executable.
+ * 
+ * Usage: php oc-cli.php command:name
+ * 
+ * @author    Custom Services Limited <info@opencartgreece.gr>
+ * @copyright 2024 Custom Services Limited
+ * @license   GPL-3.0-or-later
+ * @link      https://support.opencartgreece.gr/
+ * @link      https://github.com/Custom-Services-Limited/oc-cli
+ */
+
+if (file_exists(__DIR__ . '/vendor/autoload.php')) {
+    require __DIR__ . '/vendor/autoload.php';
+} elseif (file_exists(__DIR__ . '/../../autoload.php')) {
+    require __DIR__ . '/../../autoload.php';
+} else {
+    fwrite(STDERR, 'You must set up the project dependencies using composer install' . PHP_EOL);
+    exit(1);
+}
+
+use OpenCart\CLI\Application;
+
+$app = new Application();
+$app->run();

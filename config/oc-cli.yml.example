@@ -1,0 +1,86 @@
+# OC-CLI Configuration Example
+# Copy this file to your OpenCart root as .oc-cli.yml and customize as needed
+
+# Database settings (optional - will use OpenCart's config.php by default)
+database:
+  # Custom backup directory
+  backup_path: ./backups
+  
+  # Backup retention (days)
+  backup_retention: 30
+  
+  # Default backup compression
+  compress_backups: true
+
+# Output settings
+output:
+  # Default output format: table, json, yaml
+  format: table
+  
+  # Use colors in output
+  colors: true
+  
+  # Default pagination limit
+  pagination_limit: 20
+
+# Cache settings
+cache:
+  # Enable command result caching
+  enabled: false
+  
+  # Cache directory
+  directory: ./cache
+  
+  # Cache TTL in seconds
+  ttl: 3600
+
+# Extensions
+extensions:
+  # Auto-load custom commands from these directories
+  command_directories:
+    - ./custom/commands
+    - ./local/oc-cli/commands
+
+# Maintenance mode
+maintenance:
+  # Custom maintenance message
+  message: "Store is temporarily down for maintenance"
+  
+  # Allow access for these IP addresses during maintenance
+  allowed_ips:
+    - 127.0.0.1
+    - 192.168.1.100
+
+# Email settings for notifications
+email:
+  # SMTP settings for sending notifications
+  smtp:
+    host: localhost
+    port: 587
+    username: ""
+    password: ""
+    encryption: tls
+  
+  # Default sender
+  from:
+    email: admin@example.com
+    name: "Store Admin"
+
+# API settings
+api:
+  # Rate limiting
+  rate_limit: 100  # requests per minute
+  
+  # API key for external integrations
+  key: ""
+
+# Logging
+logging:
+  # Log level: debug, info, warning, error
+  level: info
+  
+  # Log file path
+  file: ./logs/oc-cli.log
+  
+  # Maximum log file size (MB)
+  max_size: 10
