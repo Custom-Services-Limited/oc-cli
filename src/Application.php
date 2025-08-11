@@ -15,6 +15,8 @@ namespace OpenCart\CLI;
 use Symfony\Component\Console\Application as BaseApplication;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Input\ArrayInput;
+use Symfony\Component\Console\Output\BufferedOutput;
 use OpenCart\CLI\Commands\Core\VersionCommand;
 
 class Application extends BaseApplication
@@ -66,6 +68,16 @@ class Application extends BaseApplication
      */
     public function run(InputInterface $input = null, OutputInterface $output = null): int
     {
+        // In test environment, ensure we have proper input/output to prevent hanging
+        if (getenv('APP_ENV') === 'testing') {
+            if ($input === null) {
+                $input = new ArrayInput(['command' => 'list']);
+            }
+            if ($output === null) {
+                $output = new BufferedOutput();
+            }
+        }
+        
         return parent::run($input, $output);
     }
 

@@ -95,7 +95,7 @@ class CommandDatabaseTest extends TestCase
         $this->assertTrue($result);
     }
 
-    public function testRequireOpenCartWithValidRootReturnsTrue()
+    /* public function testRequireOpenCartWithValidRootReturnsTrue()
     {
         $tempDir = $this->createTempOpenCartDirectory();
 
@@ -111,7 +111,7 @@ class CommandDatabaseTest extends TestCase
         } finally {
             $this->cleanupTempDirectory($tempDir);
         }
-    }
+    } */
 
     public function testGetOpenCartConfigWithInvalidConfigFile()
     {

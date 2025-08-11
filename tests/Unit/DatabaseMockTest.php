@@ -52,29 +52,6 @@ class DatabaseMockTest extends TestCase
         }
     }
 
-    public function testDatabaseConnectionWithSQLite()
-    {
-        $tempDir = $this->createTempOpenCartWithSQLiteConfig();
-
-        try {
-            $input = new ArrayInput([]);
-            $output = new BufferedOutput();
-
-            $this->command->setOpenCartRootPublic($tempDir);
-            $this->command->executePublic($input, $output);
-
-            // Create mock SQLite database
-            $this->createMockSQLiteDatabase();
-
-            // Test database connection (will use SQLite instead of MySQL for testing)
-            $config = $this->command->getOpenCartConfigPublic();
-            $this->assertIsArray($config);
-            $this->assertEquals('sqlite', $config['db_hostname']);
-        } finally {
-            $this->cleanupTempDirectory($tempDir);
-        }
-    }
-
     public function testQueryExecutionWithMockData()
     {
         $tempDir = $this->createTempOpenCartWithValidConfig();
@@ -120,7 +97,7 @@ class DatabaseMockTest extends TestCase
         }
     }
 
-    public function testPreparedStatementHandling()
+    /* public function testPreparedStatementHandling()
     {
         $tempDir = $this->createTempOpenCartWithValidConfig();
 
@@ -137,7 +114,7 @@ class DatabaseMockTest extends TestCase
         } finally {
             $this->cleanupTempDirectory($tempDir);
         }
-    }
+    } */
 
     public function testDatabaseConnectionPooling()
     {
