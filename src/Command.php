@@ -180,7 +180,9 @@ abstract class Command extends BaseCommand
             // Create mysqli instance and set timeouts before connecting
             $connection = mysqli_init();
             $connection->options(MYSQLI_OPT_CONNECT_TIMEOUT, 2);
-            $connection->options(MYSQLI_OPT_READ_TIMEOUT, 2);
+            if (PHP_VERSION_ID >= 70200) {
+                $connection->options(MYSQLI_OPT_READ_TIMEOUT, 2);
+            }
 
             $success = $connection->real_connect(
                 $config['db_hostname'] === 'localhost' ? '127.0.0.1' : $config['db_hostname'],
