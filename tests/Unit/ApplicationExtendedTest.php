@@ -38,7 +38,7 @@ class ApplicationExtendedTest extends TestCase
         // Test that the application has the version command
         $this->assertTrue($app->has('core:version'));
         $this->assertTrue($app->has('version'));
-        
+
         // Skip actual run() call to prevent hanging during tests
         $this->assertTrue(true);
     }
@@ -51,7 +51,7 @@ class ApplicationExtendedTest extends TestCase
         $this->assertTrue($app->has('version'));
         $command = $app->get('version');
         $this->assertInstanceOf(\OpenCart\CLI\Commands\Core\VersionCommand::class, $command);
-        
+
         // Skip actual run() call to prevent hanging during tests
         $this->assertTrue(true);
     }
@@ -202,7 +202,7 @@ class ApplicationExtendedTest extends TestCase
 
         // Test that invalid commands are not available
         $this->assertFalse($app->has('nonexistent:command'));
-        
+
         // Skip actual run() call to prevent hanging during tests
         $this->assertTrue(true);
     }

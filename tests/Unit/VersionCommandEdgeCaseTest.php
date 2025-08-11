@@ -82,7 +82,11 @@ class VersionCommandEdgeCaseTest extends TestCase
                 $output = $this->commandTester->getDisplay();
 
                 // Extract expected version from the format using a more specific regex
-                preg_match("/define\s*\(\s*['\"]VERSION['\"]\s*,\s*['\"]([^'\"]+)['\"]\s*\)/", $versionFormat, $matches);
+                preg_match(
+                    "/define\s*\(\s*['\"]VERSION['\"]\s*,\s*['\"]([^'\"]+)['\"]\s*\)/",
+                    $versionFormat,
+                    $matches
+                );
                 $expectedVersion = $matches[1];
 
                 $this->assertEquals("{$expectedVersion}\n", $output);

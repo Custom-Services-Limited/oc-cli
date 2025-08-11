@@ -21,8 +21,8 @@ use OpenCart\CLI\Commands\Core\VersionCommand;
 
 class Application extends BaseApplication
 {
-    const VERSION = '1.0.0';
-    const NAME = 'OC-CLI';
+    public const VERSION = '1.0.0';
+    public const NAME = 'OC-CLI';
 
     public function __construct()
     {
@@ -77,7 +77,7 @@ class Application extends BaseApplication
                 $output = new BufferedOutput();
             }
         }
-        
+
         return parent::run($input, $output);
     }
 

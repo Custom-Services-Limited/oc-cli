@@ -69,7 +69,7 @@ class ErrorScenarioTest extends TestCase
     {
         // Test that invalid commands are not available in the application
         $this->assertFalse($this->application->has('invalid-command-that-does-not-exist'));
-        
+
         // Skip actual run() call to prevent hanging during tests
         $this->assertTrue(true);
     }

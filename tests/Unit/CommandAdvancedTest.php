@@ -13,8 +13,8 @@
 namespace OpenCart\CLI\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
-use OpenCart\CLI\Command;
 use OpenCart\CLI\Application;
+use OpenCart\CLI\Tests\Helpers\AdvancedTestableCommand;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\BufferedOutput;
 
@@ -166,7 +166,10 @@ class CommandAdvancedTest extends TestCase
 
         // Check that an error message was written to output
         $outputContent = $output->fetch();
-        $this->assertStringContainsString('This command must be run from an OpenCart installation directory', $outputContent);
+        $this->assertStringContainsString(
+            'This command must be run from an OpenCart installation directory',
+            $outputContent
+        );
     }
 
     public function testGetOpenCartConfigWithFilePermissionIssues()
@@ -307,67 +310,5 @@ class CommandAdvancedTest extends TestCase
             }
             rmdir($dir);
         }
-    }
-}
-
-/**
- * Advanced testable command for comprehensive testing
- */
-class AdvancedTestableCommand extends Command
-{
-    protected function configure()
-    {
-        $this->setName('test:advanced-command');
-    }
-
-    protected function handle()
-    {
-        return 0;
-    }
-
-    // Public wrappers for testing
-    public function executePublic($input, $output)
-    {
-        return $this->execute($input, $output);
-    }
-
-    public function requireOpenCartPublic($require = true)
-    {
-        return $this->requireOpenCart($require);
-    }
-
-    public function getOpenCartConfigPublic()
-    {
-        return $this->getOpenCartConfig();
-    }
-
-    public function getDatabaseConnectionPublic()
-    {
-        return $this->getDatabaseConnection();
-    }
-
-    public function queryPublic($sql, $params = [])
-    {
-        return $this->query($sql, $params);
-    }
-
-    public function formatBytesPublic($bytes, $precision = 2)
-    {
-        return $this->formatBytes($bytes, $precision);
-    }
-
-    public function setOpenCartRootPublic($path)
-    {
-        $this->openCartRoot = $path;
-    }
-
-    public function getInputPublic()
-    {
-        return $this->input;
-    }
-
-    public function getOutputPublic()
-    {
-        return $this->output;
     }
 }

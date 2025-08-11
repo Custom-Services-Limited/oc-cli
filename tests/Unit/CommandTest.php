@@ -13,8 +13,9 @@
 namespace OpenCart\CLI\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
-use OpenCart\CLI\Command;
 use OpenCart\CLI\Application;
+use OpenCart\CLI\Command;
+use OpenCart\CLI\Tests\Helpers\TestableCommand;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\BufferedOutput;
 
@@ -167,52 +168,5 @@ class CommandTest extends TestCase
             }
             rmdir($dir);
         }
-    }
-}
-
-/**
- * Testable implementation of the abstract Command class
- */
-class TestableCommand extends Command
-{
-    protected function configure()
-    {
-        $this->setName('test:command');
-    }
-
-    protected function handle()
-    {
-        return 0;
-    }
-
-    // Public wrappers for protected methods for testing
-    public function executePublic($input, $output)
-    {
-        return $this->execute($input, $output);
-    }
-
-    public function requireOpenCartPublic($require = true)
-    {
-        return $this->requireOpenCart($require);
-    }
-
-    public function getOpenCartConfigPublic()
-    {
-        return $this->getOpenCartConfig();
-    }
-
-    public function getDatabaseConnectionPublic()
-    {
-        return $this->getDatabaseConnection();
-    }
-
-    public function formatBytesPublic($bytes, $precision = 2)
-    {
-        return $this->formatBytes($bytes, $precision);
-    }
-
-    public function setOpenCartRootPublic($path)
-    {
-        $this->openCartRoot = $path;
     }
 }

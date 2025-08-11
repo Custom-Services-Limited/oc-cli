@@ -12,6 +12,8 @@
 
 namespace OpenCart\CLI\Tests\Helpers;
 
+use OpenCart\CLI\Tests\Helpers\MockResult;
+
 class TestHelper
 {
     /**
@@ -227,37 +229,5 @@ class TestHelper
     public static function createMockDatabaseResult(array $data)
     {
         return new MockResult($data);
-    }
-}
-
-/**
- * Mock database result class for testing
- */
-class MockResult
-{
-    private $data;
-    private $position = 0;
-
-    public function __construct(array $data)
-    {
-        $this->data = $data;
-    }
-
-    public function fetch_all($type = MYSQLI_BOTH)
-    {
-        return $this->data;
-    }
-
-    public function fetch_assoc()
-    {
-        if ($this->position < count($this->data)) {
-            return $this->data[$this->position++];
-        }
-        return null;
-    }
-
-    public function num_rows()
-    {
-        return count($this->data);
     }
 }

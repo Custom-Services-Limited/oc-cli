@@ -125,11 +125,11 @@ class ApplicationEdgeCaseTest extends TestCase
     public function testRunMethodWithVariousInputs()
     {
         $app = new Application();
-        
+
         // Test that the application can be instantiated and has proper methods
         $this->assertInstanceOf(Application::class, $app);
         $this->assertTrue(method_exists($app, 'run'));
-        
+
         // Skip actual run() call to prevent hanging during tests
         $this->assertTrue(true);
     }
@@ -137,10 +137,10 @@ class ApplicationEdgeCaseTest extends TestCase
     public function testRunMethodWithArrayInput()
     {
         $app = new Application();
-        
+
         // Test that the application can be instantiated
         $this->assertInstanceOf(Application::class, $app);
-        
+
         // Skip actual run() call to prevent hanging during tests
         $this->assertTrue(true);
     }

@@ -141,7 +141,13 @@ class VersionCommand extends Command
                 $files = glob($dir . '/*.php');
                 foreach ($files as $file) {
                     $content = file_get_contents($file);
-                    if (preg_match("/define\s*\(\s*['\"]VERSION['\"],\s*['\"]([^'\"]+)['\"]\s*\)/", $content, $matches)) {
+                    if (
+                        preg_match(
+                            "/define\s*\(\s*['\"]VERSION['\"],\s*['\"]([^'\"]+)['\"]\s*\)/",
+                            $content,
+                            $matches
+                        )
+                    ) {
                         return $matches[1];
                     }
                 }
