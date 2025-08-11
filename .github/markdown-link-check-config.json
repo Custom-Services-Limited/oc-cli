@@ -5,6 +5,9 @@
     },
     {
       "pattern": "^https://localhost"
+    },
+    {
+      "pattern": "^https://support.opencartgreece.gr"
     }
   ],
   "replacementPatterns": [
