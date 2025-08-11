@@ -23,6 +23,11 @@ use OpenCart\CLI\Commands\Core\ConfigCommand;
 use OpenCart\CLI\Commands\Database\InfoCommand;
 use OpenCart\CLI\Commands\Database\BackupCommand;
 use OpenCart\CLI\Commands\Database\RestoreCommand;
+use OpenCart\CLI\Commands\Extension\ListCommand as ExtensionListCommand;
+use OpenCart\CLI\Commands\Extension\InstallCommand;
+use OpenCart\CLI\Commands\Extension\EnableCommand;
+use OpenCart\CLI\Commands\Extension\DisableCommand;
+use OpenCart\CLI\Commands\Extension\ModificationListCommand;
 
 class Application extends BaseApplication
 {
@@ -59,6 +64,11 @@ class Application extends BaseApplication
         $commands[] = new InfoCommand();
         $commands[] = new BackupCommand();
         $commands[] = new RestoreCommand();
+        $commands[] = new ExtensionListCommand();
+        $commands[] = new InstallCommand();
+        $commands[] = new EnableCommand();
+        $commands[] = new DisableCommand();
+        $commands[] = new ModificationListCommand();
 
         return $commands;
     }
