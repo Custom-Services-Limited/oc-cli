@@ -20,6 +20,7 @@ oc product:list --limit=10 --format=json
 
 Most commands support these global options:
 
+- `--opencart-root=<path>` - Path to OpenCart installation directory (allows running commands from anywhere)
 - `--format=<format>` - Output format: `table` (default), `json`, `yaml`
 - `--quiet` - Suppress output
 - `--verbose` - Increase verbosity
@@ -36,8 +37,9 @@ oc core:version [options]
 ```
 
 **Options:**
+- `--opencart-root=<path>` - Path to OpenCart installation directory
 - `--opencart, -o` - Show only OpenCart version
-- `--format=<format>` - Output format
+- `--format=<format>` - Output format (table, json, yaml)
 
 **Examples:**
 ```bash
@@ -49,6 +51,12 @@ oc core:version --opencart
 
 # JSON output
 oc core:version --format=json
+
+# Check version from different directory
+oc core:version --opencart-root=/var/www/opencart
+
+# Show only OpenCart version from specific path
+oc core:version --opencart --opencart-root=/path/to/opencart
 ```
 
 ### core:check-requirements
@@ -56,38 +64,96 @@ Check system requirements for OpenCart and OC-CLI.
 
 **Usage:**
 ```bash
-oc core:check-requirements
+oc core:check-requirements [options]
 ```
+
+**Options:**
+- `--opencart-root=<path>` - Path to OpenCart installation directory
+- `--format=<format>` - Output format (table, json, yaml)
 
 **Examples:**
 ```bash
+# Check requirements (basic)
 oc core:check-requirements
+
+# Check requirements with JSON output
+oc core:check-requirements --format=json
+
+# Check requirements for specific OpenCart installation
+oc core:check-requirements --opencart-root=/var/www/opencart
+
+# YAML output for automation scripts
+oc core:check-requirements --format=yaml --opencart-root=/path/to/oc
 ```
 
+**What it checks:**
+- PHP version (>= 7.4) and configuration (memory limit, execution time)
+- Required PHP extensions (curl, gd, mbstring, zip, zlib, json, openssl)
+- Recommended PHP extensions (mysqli, pdo_mysql, iconv, mcrypt)
+- OpenCart directory and file permissions
+- Database connectivity (if OpenCart installation found)
+
 ### core:config
-Manage OpenCart configuration settings.
+Manage OpenCart configuration settings stored in the database.
 
 **Usage:**
 ```bash
-oc core:config <action> [key] [value]
+oc core:config [action] [key] [value] [options]
 ```
 
 **Actions:**
-- `get` - Get configuration value
+- `list` - List all configuration settings (default)
+- `get` - Get specific configuration value
 - `set` - Set configuration value
-- `list` - List all configuration
+
+**Options:**
+- `--opencart-root=<path>` - Path to OpenCart installation directory
+- `--format=<format>` - Output format (table, json, yaml)
+- `--admin, -a` - Use admin configuration instead of catalog
 
 **Examples:**
 ```bash
-# Get a configuration value
+# List all catalog configuration
+oc core:config list
+
+# List all configuration in JSON format
+oc core:config list --format=json
+
+# List admin configuration
+oc core:config list --admin
+
+# Get a specific configuration value
 oc core:config get config_name
 
 # Set a configuration value
 oc core:config set config_name "new value"
 
-# List all configuration
-oc core:config list
+# Work with specific OpenCart installation
+oc core:config list --opencart-root=/var/www/opencart
+
+# Set admin configuration from different directory
+oc core:config set config_admin_setting "value" --admin --opencart-root=/path/to/oc
+
+# Get configuration in YAML format for scripts
+oc core:config get config_currency --format=yaml --opencart-root=/var/www/store
 ```
+
+**Important Notes:**
+- This command requires a valid OpenCart installation with database access
+- Configuration changes are written directly to the database
+- Use `--admin` flag to work with admin panel settings instead of catalog settings
+- Some configuration changes may require cache clearing to take effect
+- Be careful when setting configuration values - invalid values may break your store
+
+**Common Configuration Keys:**
+- `config_name` - Store name
+- `config_owner` - Store owner
+- `config_address` - Store address
+- `config_email` - Store email
+- `config_telephone` - Store telephone
+- `config_currency` - Default currency
+- `config_language` - Default language
+- `config_admin_language` - Admin language (use with --admin)
 
 ## Database Commands
 

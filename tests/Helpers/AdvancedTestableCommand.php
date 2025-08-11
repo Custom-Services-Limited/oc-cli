@@ -11,6 +11,7 @@ class AdvancedTestableCommand extends Command
 {
     protected function configure()
     {
+        parent::configure();
         $this->setName('test:advanced-command');
     }
 

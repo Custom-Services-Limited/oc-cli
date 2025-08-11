@@ -58,6 +58,11 @@ class VersionCommandCompleteTest extends TestCase
     {
         $definition = $this->command->getDefinition();
 
+        // Test opencart-root option (inherited from base Command)
+        $this->assertTrue($definition->hasOption('opencart-root'));
+        $openCartRootOption = $definition->getOption('opencart-root');
+        $this->assertTrue($openCartRootOption->isValueRequired());
+
         // Test opencart option
         $this->assertTrue($definition->hasOption('opencart'));
         $openCartOption = $definition->getOption('opencart');
@@ -266,6 +271,86 @@ class VersionCommandCompleteTest extends TestCase
             $this->assertStringContainsString('php: ' . PHP_VERSION, $output);
         } finally {
             chdir($originalDir);
+            $this->cleanupTempDirectory($tempDir);
+        }
+    }
+
+    public function testOpenCartRootOptionWithValidPath()
+    {
+        $tempDir = $this->createTempOpenCartWithVersion('4.0.2.0');
+
+        try {
+            // Test from a different directory using --opencart-root
+            $this->commandTester->execute(['--opencart-root' => $tempDir]);
+
+            $this->assertEquals(0, $this->commandTester->getStatusCode());
+            $output = $this->commandTester->getDisplay();
+
+            // Should detect OpenCart version from the specified path
+            $this->assertStringContainsString('4.0.2.0', $output);
+            $this->assertStringContainsString('OpenCart root:', $output);
+
+            // Check if the unique part of the temp directory name is in the output
+            $tempDirBasename = basename($tempDir);
+            $uniquePart = substr($tempDirBasename, -8);
+            $this->assertStringContainsString($uniquePart, $output);
+        } finally {
+            $this->cleanupTempDirectory($tempDir);
+        }
+    }
+
+    public function testOpenCartRootOptionWithInvalidPath()
+    {
+        $this->commandTester->execute(['--opencart-root' => '/nonexistent/path']);
+
+        $this->assertEquals(0, $this->commandTester->getStatusCode());
+        $output = $this->commandTester->getDisplay();
+
+        // Should show "Not detected" for OpenCart
+        $this->assertStringContainsString('Not detected', $output);
+        $this->assertStringContainsString('No OpenCart installation detected', $output);
+    }
+
+    public function testOpenCartRootOptionWithJsonFormat()
+    {
+        $tempDir = $this->createTempOpenCartWithVersion('3.0.4.0');
+
+        try {
+            $this->commandTester->execute([
+                '--opencart-root' => $tempDir,
+                '--format' => 'json'
+            ]);
+
+            $this->assertEquals(0, $this->commandTester->getStatusCode());
+            $output = $this->commandTester->getDisplay();
+
+            $json = json_decode($output, true);
+            $this->assertIsArray($json);
+            $this->assertEquals('3.0.4.0', $json['opencart']);
+            $this->assertEquals('1.0.0', $json['oc-cli']);
+            $this->assertArrayHasKey('php', $json);
+            $this->assertArrayHasKey('os', $json);
+        } finally {
+            $this->cleanupTempDirectory($tempDir);
+        }
+    }
+
+    public function testOpenCartRootOptionWithOpenCartOnlyFlag()
+    {
+        $tempDir = $this->createTempOpenCartWithVersion('2.3.0.2');
+
+        try {
+            $this->commandTester->execute([
+                '--opencart-root' => $tempDir,
+                '--opencart' => true
+            ]);
+
+            $this->assertEquals(0, $this->commandTester->getStatusCode());
+            $output = $this->commandTester->getDisplay();
+
+            // Should only show OpenCart version
+            $this->assertEquals("2.3.0.2\n", $output);
+        } finally {
             $this->cleanupTempDirectory($tempDir);
         }
     }

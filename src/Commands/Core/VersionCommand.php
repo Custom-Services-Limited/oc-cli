@@ -22,6 +22,8 @@ class VersionCommand extends Command
      */
     protected function configure()
     {
+        parent::configure();
+
         $this
             ->setName('core:version')
             ->setAliases(['version'])
