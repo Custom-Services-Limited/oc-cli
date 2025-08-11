@@ -122,18 +122,43 @@ abstract class Command extends BaseCommand
             return null;
         }
 
-        include_once $configFile;
+        // Read and parse the config file manually to avoid constant pollution
+        $content = file_get_contents($configFile);
+        if ($content === false) {
+            return null;
+        }
 
-        return [
-            'db_hostname' => defined('DB_HOSTNAME') ? DB_HOSTNAME : null,
-            'db_username' => defined('DB_USERNAME') ? DB_USERNAME : null,
-            'db_password' => defined('DB_PASSWORD') ? DB_PASSWORD : null,
-            'db_database' => defined('DB_DATABASE') ? DB_DATABASE : null,
-            'db_port' => defined('DB_PORT') ? DB_PORT : 3306,
-            'db_prefix' => defined('DB_PREFIX') ? DB_PREFIX : '',
-            'http_server' => defined('HTTP_SERVER') ? HTTP_SERVER : null,
-            'https_server' => defined('HTTPS_SERVER') ? HTTPS_SERVER : null,
+        $config = [
+            'db_hostname' => $this->extractConfigValue($content, 'DB_HOSTNAME'),
+            'db_username' => $this->extractConfigValue($content, 'DB_USERNAME'),
+            'db_password' => $this->extractConfigValue($content, 'DB_PASSWORD'),
+            'db_database' => $this->extractConfigValue($content, 'DB_DATABASE'),
+            'db_port' => $this->extractConfigValue($content, 'DB_PORT') ?: 3306,
+            'db_prefix' => $this->extractConfigValue($content, 'DB_PREFIX') ?: '',
+            'http_server' => $this->extractConfigValue($content, 'HTTP_SERVER'),
+            'https_server' => $this->extractConfigValue($content, 'HTTPS_SERVER'),
         ];
+
+        return $config;
+    }
+
+    /**
+     * Extract configuration value from PHP file content
+     *
+     * @param string $content
+     * @param string $constant
+     * @return string|null
+     */
+    protected function extractConfigValue($content, $constant)
+    {
+        // Match define('CONSTANT', 'value') or define("CONSTANT", "value")
+        $pattern = '/define\s*\(\s*[\'"]' . preg_quote($constant, '/') . '[\'"]\s*,\s*[\'"]([^\'"]*)[\'"\s]*\)/i';
+
+        if (preg_match($pattern, $content, $matches)) {
+            return $matches[1];
+        }
+
+        return null;
     }
 
     /**
@@ -150,7 +175,7 @@ abstract class Command extends BaseCommand
 
         try {
             $connection = new \mysqli(
-                $config['db_hostname'],
+                $config['db_hostname'] === 'localhost' ? '127.0.0.1' : $config['db_hostname'],
                 $config['db_username'],
                 $config['db_password'],
                 $config['db_database'],
@@ -158,14 +183,18 @@ abstract class Command extends BaseCommand
             );
 
             if ($connection->connect_error) {
+                $this->io->error("Database connection failed: " . $connection->connect_error);
                 return null;
             }
 
             return $connection;
         } catch (\Exception $e) {
+            $this->io->error("Database connection exception: " . $e->getMessage());
+            $this->io->error("Error details: " . $e->getFile() . ":" . $e->getLine());
             return null;
         }
     }
+
 
     /**
      * Execute a database query
