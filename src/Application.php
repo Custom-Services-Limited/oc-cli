@@ -38,13 +38,14 @@ class Application extends BaseApplication
      */
     protected function getDefaultCommands(): array
     {
-        $commands = parent::getDefaultCommands();
-
-        // Filter out problematic commands when running in PHAR
+        // When running in PHAR, manually add only safe default commands to avoid filesystem issues
         if (\Phar::running()) {
-            $commands = array_filter($commands, function ($command) {
-                return !($command instanceof \Symfony\Component\Console\Command\DumpCompletionCommand);
-            });
+            $commands = [
+                new \Symfony\Component\Console\Command\HelpCommand(),
+                new \Symfony\Component\Console\Command\ListCommand(),
+            ];
+        } else {
+            $commands = parent::getDefaultCommands();
         }
 
         $commands[] = new VersionCommand();
