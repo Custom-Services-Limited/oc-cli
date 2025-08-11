@@ -174,7 +174,17 @@ abstract class Command extends BaseCommand
         }
 
         try {
-            $connection = new \mysqli(
+            // Set connection timeout to prevent hanging in tests
+            ini_set('default_socket_timeout', 2);
+
+            // Create mysqli instance and set timeouts before connecting
+            $connection = mysqli_init();
+            $connection->options(MYSQLI_OPT_CONNECT_TIMEOUT, 2);
+            if (PHP_VERSION_ID >= 70200) {
+                $connection->options(MYSQLI_OPT_READ_TIMEOUT, 2);
+            }
+
+            $success = $connection->real_connect(
                 $config['db_hostname'] === 'localhost' ? '127.0.0.1' : $config['db_hostname'],
                 $config['db_username'],
                 $config['db_password'],
@@ -182,8 +192,8 @@ abstract class Command extends BaseCommand
                 $config['db_port']
             );
 
-            if ($connection->connect_error) {
-                $this->io->error("Database connection failed: " . $connection->connect_error);
+            if (!$success || $connection->connect_error) {
+                $this->io->error("Database connection failed: " . ($connection->connect_error ?: 'Connection failed'));
                 return null;
             }
 
