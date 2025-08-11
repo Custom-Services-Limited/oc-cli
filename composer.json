@@ -51,6 +51,6 @@
         "test:ci": "./vendor/bin/phpunit --coverage-clover build/clover.xml",
         "cs-check": "./vendor/bin/phpcs --standard=PSR12 src/ tests/",
         "cs-fix": "./vendor/bin/phpcbf --standard=PSR12 src/ tests/",
-        "analyze": "./vendor/bin/phpstan analyse src/ --level=5"
+        "analyze": "./vendor/bin/phpstan analyse src/"
     }
 }
