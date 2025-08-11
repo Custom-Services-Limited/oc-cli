@@ -16,6 +16,8 @@
             "in": "vendor"
         }
     ],
+    "exclude-composer-files": false,
+    "exclude-dev-files": true,
     "git-version": "package_version",
     "datetime": "package_datetime",
     "compactors": [
