@@ -39,7 +39,7 @@ class Application extends BaseApplication
     protected function getDefaultCommands(): array
     {
         $commands = parent::getDefaultCommands();
-        
+
         // Filter out problematic commands when running in PHAR
         if (\Phar::running()) {
             $commands = array_filter($commands, function ($command) {
