@@ -40,6 +40,10 @@ class DatabaseMockTest extends TestCase
         $this->application = new Application();
         $this->command = new DatabaseMockCommand();
         $this->command->setApplication($this->application);
+        // Ensure the command is properly configured
+        if (!$this->command->getDefinition()->hasOption('opencart-root')) {
+            $this->command->configure();
+        }
 
         // Create SQLite database for testing
         $this->tempDbFile = sys_get_temp_dir() . '/oc-cli-test-' . uniqid() . '.sqlite';

@@ -11,6 +11,7 @@ class TestableCommand extends Command
 {
     protected function configure()
     {
+        parent::configure();
         $this->setName('test:command');
     }
 

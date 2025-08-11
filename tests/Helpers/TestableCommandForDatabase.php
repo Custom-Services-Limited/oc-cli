@@ -11,6 +11,7 @@ class TestableCommandForDatabase extends Command
 {
     protected function configure()
     {
+        parent::configure();
         $this->setName('test:database-command');
     }
 

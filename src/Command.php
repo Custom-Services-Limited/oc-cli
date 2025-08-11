@@ -14,6 +14,7 @@ namespace OpenCart\CLI;
 
 use Symfony\Component\Console\Command\Command as BaseCommand;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
@@ -40,6 +41,19 @@ abstract class Command extends BaseCommand
     protected $openCartRoot;
 
     /**
+     * Configure the command with global options
+     */
+    protected function configure()
+    {
+        $this->addOption(
+            'opencart-root',
+            null,
+            InputOption::VALUE_REQUIRED,
+            'Path to OpenCart installation directory'
+        );
+    }
+
+    /**
      * Execute the command
      *
      * @param InputInterface $input
@@ -52,7 +66,17 @@ abstract class Command extends BaseCommand
         $this->output = $output;
         $this->io = new SymfonyStyle($input, $output);
 
-        $this->openCartRoot = $this->getApplication()->getOpenCartRoot();
+        // Check if the opencart-root option exists and is set
+        $explicitRoot = null;
+        if ($input->hasOption('opencart-root') && $input->getOption('opencart-root')) {
+            $explicitRoot = $input->getOption('opencart-root');
+        }
+
+        if ($explicitRoot) {
+            $this->openCartRoot = $this->getApplication()->getOpenCartRoot($explicitRoot);
+        } else {
+            $this->openCartRoot = $this->getApplication()->getOpenCartRoot();
+        }
 
         return $this->handle();
     }

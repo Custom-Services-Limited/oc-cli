@@ -36,6 +36,10 @@ class CommandTest extends TestCase
         $this->application = new Application();
         $this->command = new TestableCommand();
         $this->command->setApplication($this->application);
+        // Ensure the command is properly configured
+        if (!$this->command->getDefinition()->hasOption('opencart-root')) {
+            $this->command->configure();
+        }
     }
 
     public function testCommandCanBeInstantiated()

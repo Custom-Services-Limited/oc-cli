@@ -11,6 +11,7 @@ class DatabaseMockCommand extends Command
 {
     protected function configure()
     {
+        parent::configure();
         $this->setName('test:database-mock');
     }
 

@@ -18,6 +18,8 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\BufferedOutput;
 use OpenCart\CLI\Commands\Core\VersionCommand;
+use OpenCart\CLI\Commands\Core\CheckRequirementsCommand;
+use OpenCart\CLI\Commands\Core\ConfigCommand;
 
 class Application extends BaseApplication
 {
@@ -49,6 +51,8 @@ class Application extends BaseApplication
         }
 
         $commands[] = new VersionCommand();
+        $commands[] = new CheckRequirementsCommand();
+        $commands[] = new ConfigCommand();
 
         return $commands;
     }
@@ -123,6 +127,11 @@ class Application extends BaseApplication
     {
         $path = realpath($startPath);
 
+        if (!$path) {
+            return null;
+        }
+
+        // Default behavior: search upwards from current directory or provided path
         while ($path && $path !== '/') {
             if ($this->detectOpenCart($path)) {
                 return $path;
