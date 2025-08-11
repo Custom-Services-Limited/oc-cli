@@ -1,7 +1,8 @@
 <?php
+
 /**
  * OC-CLI - OpenCart Command Line Interface
- * 
+ *
  * @author    Custom Services Limited <info@opencartgreece.gr>
  * @copyright 2024 Custom Services Limited
  * @license   GPL-3.0-or-later
@@ -33,10 +34,10 @@ class Application extends BaseApplication
      *
      * @return array
      */
-    protected function getDefaultCommands()
+    protected function getDefaultCommands(): array
     {
         $commands = parent::getDefaultCommands();
-        
+
         $commands[] = new VersionCommand();
 
         return $commands;
@@ -63,7 +64,7 @@ class Application extends BaseApplication
      * @param OutputInterface $output
      * @return int
      */
-    public function run(InputInterface $input = null, OutputInterface $output = null)
+    public function run(InputInterface $input = null, OutputInterface $output = null): int
     {
         return parent::run($input, $output);
     }
@@ -101,7 +102,7 @@ class Application extends BaseApplication
     public function getOpenCartRoot($startPath = '.')
     {
         $path = realpath($startPath);
-        
+
         while ($path && $path !== '/') {
             if ($this->detectOpenCart($path)) {
                 return $path;

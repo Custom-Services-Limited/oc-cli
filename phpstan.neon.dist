@@ -1,0 +1,30 @@
+parameters:
+    level: 5
+    paths:
+        - src
+    
+    # Ignore specific patterns
+    ignoreErrors:
+        # Ignore missing mysqli extension for static analysis
+        - '#Call to method.*on an unknown class mysqli#'
+        - '#Class mysqli not found#'
+        
+        # Ignore dynamic properties for backward compatibility
+        - '#Access to an undefined property#'
+        
+        # Allow mixed types for configuration arrays
+        - '#has no value type specified in iterable type array#'
+    
+    # Bootstrap for better understanding of the codebase
+    bootstrapFiles:
+        - vendor/autoload.php
+    
+    # Check PHP compatibility
+    phpVersion: 70100
+    
+    # Additional checks
+    checkMissingIterableValueType: false
+    checkGenericClassInNonGenericObjectType: false
+    
+    # Type coverage
+    reportUnmatchedIgnoredErrors: false

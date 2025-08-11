@@ -1,0 +1,199 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ${{ matrix.operating-system }}
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        operating-system: [ubuntu-latest, windows-latest, macos-latest]
+        php-version: ['7.0', '7.1', '7.2', '7.3', '7.4', '8.0', '8.1', '8.2', '8.3']
+        exclude:
+          # Exclude problematic combinations
+          - operating-system: windows-latest
+            php-version: '7.0'
+          - operating-system: macos-latest
+            php-version: '7.0'
+
+    name: PHP ${{ matrix.php-version }} - ${{ matrix.operating-system }}
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: ${{ matrix.php-version }}
+        extensions: mbstring, mysqli, zip
+        coverage: pcov
+        tools: composer:v2
+
+    - name: Validate composer.json and composer.lock
+      run: composer validate --strict
+
+    - name: Cache Composer packages
+      id: composer-cache
+      uses: actions/cache@v3
+      with:
+        path: vendor
+        key: ${{ runner.os }}-php-${{ matrix.php-version }}-${{ hashFiles('**/composer.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-php-${{ matrix.php-version }}-
+
+    - name: Install dependencies
+      run: composer install --prefer-dist --no-progress
+
+    - name: Run unit tests
+      run: composer test:unit
+
+    - name: Run integration tests
+      run: composer test:integration
+
+    - name: Generate coverage report
+      if: matrix.php-version == '8.1' && matrix.operating-system == 'ubuntu-latest'
+      run: composer test:coverage
+
+    - name: Upload coverage reports to Codecov
+      if: matrix.php-version == '8.1' && matrix.operating-system == 'ubuntu-latest'
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./build/clover.xml
+        flags: unittests
+        name: codecov-umbrella
+
+  code-quality:
+    runs-on: ubuntu-latest
+    name: Code Quality
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.1'
+        extensions: mbstring, mysqli, zip
+        tools: composer:v2
+
+    - name: Cache Composer packages
+      id: composer-cache
+      uses: actions/cache@v3
+      with:
+        path: vendor
+        key: ${{ runner.os }}-php-8.1-${{ hashFiles('**/composer.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-php-8.1-
+
+    - name: Install dependencies
+      run: composer install --prefer-dist --no-progress
+
+    - name: Check code style
+      run: composer cs-check
+
+    - name: Run static analysis
+      run: composer analyze
+
+  security:
+    runs-on: ubuntu-latest
+    name: Security Scan
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.1'
+        extensions: mbstring, mysqli, zip
+        tools: composer:v2
+
+    - name: Install dependencies
+      run: composer install --prefer-dist --no-progress
+
+    - name: Security scan
+      uses: symfonycorp/security-checker-action@v5
+
+  build-phar:
+    runs-on: ubuntu-latest
+    name: Build PHAR
+    needs: [test, code-quality]
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.1'
+        extensions: mbstring, mysqli, zip, phar
+        tools: composer:v2
+
+    - name: Install dependencies
+      run: composer install --prefer-dist --no-progress --no-dev --optimize-autoloader
+
+    - name: Build PHAR
+      run: |
+        curl -fsSL https://github.com/box-project/box/releases/latest/download/box.phar -o box.phar
+        chmod +x box.phar
+        ./box.phar compile
+
+    - name: Test PHAR
+      run: |
+        php oc-cli.phar --version
+        php oc-cli.phar core:version
+
+    - name: Upload PHAR artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: oc-cli-phar
+        path: oc-cli.phar
+
+  documentation:
+    runs-on: ubuntu-latest
+    name: Documentation Check
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Check README links
+      uses: gaurav-nelson/github-action-markdown-link-check@v1
+      with:
+        use-quiet-mode: 'yes'
+        use-verbose-mode: 'yes'
+        config-file: '.github/markdown-link-check-config.json'
+
+    - name: Validate documentation structure
+      run: |
+        # Check that all documented commands have corresponding files
+        echo "Checking documentation structure..."
+        
+        # Check if all files mentioned in README exist
+        if [ ! -f "docs/installation.md" ]; then
+          echo "Missing docs/installation.md"
+          exit 1
+        fi
+        
+        if [ ! -f "docs/commands.md" ]; then
+          echo "Missing docs/commands.md"
+          exit 1
+        fi
+        
+        if [ ! -f "docs/development.md" ]; then
+          echo "Missing docs/development.md"
+          exit 1
+        fi
+        
+        if [ ! -f "docs/examples.md" ]; then
+          echo "Missing docs/examples.md"
+          exit 1
+        fi
+        
+        echo "Documentation structure is valid!"
