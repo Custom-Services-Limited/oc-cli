@@ -8,6 +8,9 @@
     },
     {
       "pattern": "^https://support.opencartgreece.gr"
+    },
+    {
+      "pattern": "^https://forum.opencart.com"
     }
   ],
   "replacementPatterns": [
