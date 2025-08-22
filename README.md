@@ -294,7 +294,6 @@ Visit us at [https://support.opencartgreece.gr/](https://support.opencartgreece.
 - This software is provided "as is" without warranty of any kind
 - Users assume all responsibility for using this tool with their OpenCart installations
 
-**For official OpenCart tools and support, please visit:** [https://www.opencart.com/](https://www.opencart.com/)
 
 ## Changelog
 
