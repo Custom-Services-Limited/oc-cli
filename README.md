@@ -97,21 +97,6 @@ oc db:backup backup.sql
 oc db:restore backup.sql
 ```
 
-### Product Management
-```bash
-# List products
-oc product:list
-
-# Create a new product
-oc product:create --name "New Product" --model "NP001" --price 29.99
-
-# Update a product
-oc product:update 1 --name "Updated Product"
-
-# Delete a product
-oc product:delete 1
-```
-
 ### Extension Management
 ```bash
 # List installed extensions
@@ -122,48 +107,58 @@ oc extension:install extension_name
 
 # Enable an extension
 oc extension:enable extension_name
+
+# Disable an extension
+oc extension:disable extension_name
+
+# List modifications
+oc modification:list
 ```
 
+## Implementation Status
+
+✅ = Implemented | 🚧 = Coming Soon (Help us by contributing!)
+
+### Core Commands ✅
+- ✅ `core:version` - Display version information
+- ✅ `core:check-requirements` - Check system requirements
+- ✅ `core:config` - Manage OpenCart configuration
+
+### Database Commands ✅
+- ✅ `db:info` - Display database connection information
+- ✅ `db:backup` - Create database backup
+- ✅ `db:restore` - Restore database from backup
+
+### Extension Commands ✅
+- ✅ `extension:list` - List installed extensions
+- ✅ `extension:install` - Install an extension
+- ✅ `extension:enable` - Enable an extension
+- ✅ `extension:disable` - Disable an extension
+- ✅ `modification:list` - List installed modifications
+
+### Product Commands 🚧
+- 🚧 `product:list` - List products
+- 🚧 `product:create` - Create a new product
+- 🚧 `product:update` - Update an existing product
+- 🚧 `product:delete` - Delete a product
+- 🚧 `category:list` - List categories
+- 🚧 `category:create` - Create a new category
+
+### Order Commands 🚧
+- 🚧 `order:list` - List orders
+- 🚧 `order:view` - View order details
+- 🚧 `order:update-status` - Update order status
+
+### Cache Commands 🚧
+- 🚧 `cache:clear` - Clear all caches
+- 🚧 `cache:rebuild` - Rebuild caches
+
+### User Commands 🚧
+- 🚧 `user:list` - List admin users
+- 🚧 `user:create` - Create a new admin user
+- 🚧 `user:delete` - Delete an admin user
+
 ## Available Commands
-
-### Core Commands
-- `core:version` - Display version information
-- `core:check-requirements` - Check system requirements
-- `core:config` - Manage OpenCart configuration
-
-### Database Commands
-- `db:info` - Display database connection information
-- `db:backup` - Create database backup
-- `db:restore` - Restore database from backup
-
-### Product Commands
-- `product:list` - List products
-- `product:create` - Create a new product
-- `product:update` - Update an existing product
-- `product:delete` - Delete a product
-- `category:list` - List categories
-- `category:create` - Create a new category
-
-### Order Commands
-- `order:list` - List orders
-- `order:view` - View order details
-- `order:update-status` - Update order status
-
-### Extension Commands
-- `extension:list` - List installed extensions
-- `extension:install` - Install an extension
-- `extension:uninstall` - Uninstall an extension
-- `extension:enable` - Enable an extension
-- `extension:disable` - Disable an extension
-
-### Cache Commands
-- `cache:clear` - Clear all caches
-- `cache:rebuild` - Rebuild caches
-
-### User Commands
-- `user:list` - List admin users
-- `user:create` - Create a new admin user
-- `user:delete` - Delete an admin user
 
 ## Configuration
 
@@ -211,12 +206,30 @@ composer cs-fix
 
 ### Contributing
 
+We welcome contributions! Many commands are marked as "🚧 Coming Soon" and need implementation.
+
+**How to contribute:**
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests for new functionality
-5. Ensure all tests pass
-6. Submit a pull request
+2. Look for commands marked with 🚧 in the Implementation Status section
+3. Create a feature branch: `git checkout -b feature/implement-product-commands`
+4. Implement the command following existing patterns in `src/Commands/`
+5. Add tests for new functionality in `tests/`
+6. Ensure all tests pass: `composer test`
+7. Submit a pull request
+
+**Priority commands needing implementation:**
+- Product management commands (product:list, product:create, etc.)
+- Order management commands
+- Cache management commands
+- User management commands
+
+**Development setup:**
+```bash
+git clone https://github.com/Custom-Services-Limited/oc-cli.git
+cd oc-cli
+composer install
+composer test
+```
 
 ## Extending OC-CLI
 
@@ -268,10 +281,26 @@ Custom Services Limited is a professional OpenCart development and support compa
 
 Visit us at [https://support.opencartgreece.gr/](https://support.opencartgreece.gr/) for more information about our services.
 
+## Legal Notice & Disclaimer
+
+**Important:** This project is an independent, open-source tool created by Custom Services Limited and is **NOT affiliated with, endorsed by, or officially connected to OpenCart Ltd. or the official OpenCart project**.
+
+- **OpenCart** is a registered trademark of OpenCart Ltd.
+- This CLI tool is developed independently to help OpenCart users manage their installations
+- We acknowledge that OpenCart is a trademark of OpenCart Ltd.
+- This project is released under the GPL v3 license as free, open-source software
+- Use of the OpenCart name in this project is purely for descriptive purposes to indicate compatibility
+- Custom Services Limited and the contributors of this project disclaim any affiliation with OpenCart Ltd.
+- This software is provided "as is" without warranty of any kind
+- Users assume all responsibility for using this tool with their OpenCart installations
+
+
 ## Changelog
 
 ### 1.0.0
-- Initial release
-- Core version command
-- Basic project structure
+- Initial release with core commands
+- Database backup/restore functionality
+- Extension management commands
+- System requirements checking
+- OpenCart configuration management
 - PHP 7.0+ compatibility

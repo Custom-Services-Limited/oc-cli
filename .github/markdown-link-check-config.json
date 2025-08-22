@@ -8,6 +8,9 @@
     },
     {
       "pattern": "^https://support.opencartgreece.gr"
+    },
+    {
+      "pattern": "^https://forum.opencart.com"
     }
   ],
   "replacementPatterns": [
@@ -31,6 +34,7 @@
   "fallbackHttpStatus": [
     400,
     401,
+    403,
     404,
     405,
     500,
