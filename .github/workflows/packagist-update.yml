@@ -1,0 +1,16 @@
+name: Update Packagist
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  update-packagist:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Ping Packagist
+      run: |
+        curl -XPOST -H'content-type:application/json' \
+          'https://packagist.org/api/update-package?username=botonakis&apiToken=${{ secrets.PACKAGIST_API_TOKEN }}' \
+          -d'{"repository":{"url":"https://github.com/Custom-Services-Limited/oc-cli"}}'
