@@ -137,7 +137,7 @@ oc modification:list
 - ✅ `modification:list` - List installed modifications
 
 ### Product Commands 🚧
-- 🚧 `product:list` - List products
+- ✅ `product:list` - List products
 - 🚧 `product:create` - Create a new product
 - 🚧 `product:update` - Update an existing product
 - 🚧 `product:delete` - Delete a product

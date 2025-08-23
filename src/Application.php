@@ -28,6 +28,7 @@ use OpenCart\CLI\Commands\Extension\InstallCommand;
 use OpenCart\CLI\Commands\Extension\EnableCommand;
 use OpenCart\CLI\Commands\Extension\DisableCommand;
 use OpenCart\CLI\Commands\Extension\ModificationListCommand;
+use OpenCart\CLI\Commands\Product\ListCommand as ProductListCommand;
 
 class Application extends BaseApplication
 {
@@ -69,6 +70,7 @@ class Application extends BaseApplication
         $commands[] = new EnableCommand();
         $commands[] = new DisableCommand();
         $commands[] = new ModificationListCommand();
+        $commands[] = new ProductListCommand();
 
         return $commands;
     }
