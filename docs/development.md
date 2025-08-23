@@ -135,7 +135,7 @@ protected function getDefaultCommands()
 
 ### Working with OpenCart Data
 
-The base `Command` class provides helper methods:
+The base `Command` class provides helper methods for database operations:
 
 ```php
 // Check if we're in an OpenCart installation
@@ -143,7 +143,7 @@ if (!$this->requireOpenCart()) {
     return 1;
 }
 
-// Get OpenCart configuration
+// Get OpenCart configuration (from config.php or command-line options)
 $config = $this->getOpenCartConfig();
 
 // Get database connection
@@ -152,6 +152,69 @@ $connection = $this->getDatabaseConnection();
 // Execute database queries
 $result = $this->query("SELECT * FROM {$config['db_prefix']}product LIMIT 10");
 ```
+
+#### Database Connection Options
+
+The CLI supports two methods for database connectivity:
+
+1. **OpenCart Installation Method** (Traditional):
+```php
+// Detects config.php in OpenCart root directory
+$this->requireOpenCart(); // Returns true if valid OpenCart installation found
+$config = $this->getOpenCartConfig(); // Reads from config.php
+```
+
+2. **Direct Database Connection** (New):
+```bash
+# Command-line database options
+oc product:list --db-host=localhost --db-user=oc_user --db-pass=password --db-name=opencart_db
+```
+
+The base `Command` class automatically handles both methods:
+
+```php
+protected function getOpenCartConfig()
+{
+    // Check if database connection parameters are provided via command line options
+    if ($this->input && $this->input->hasOption('db-host') && $this->input->getOption('db-host')) {
+        return [
+            'db_hostname' => $this->input->getOption('db-host'),
+            'db_username' => $this->input->getOption('db-user'),
+            'db_password' => $this->input->getOption('db-pass'),
+            'db_database' => $this->input->getOption('db-name'),
+            'db_port' => $this->input->getOption('db-port') ?: 3306,
+            'db_prefix' => $this->input->getOption('db-prefix') ?: 'oc_',
+        ];
+    }
+
+    // Fall back to config.php detection
+    // ... existing config.php logic
+}
+```
+
+#### Database Schema Reference
+
+For detailed information about OpenCart's database structure used by OC-CLI commands, refer to:
+- **[Database Schema Documentation](database-schema.md)** - Comprehensive reference for all product-related tables
+- **[OpenCart 2.x & 3.x Structure](../tests/oc2x_and_3x_db_structure.sql)** - Complete database schema SQL file
+
+**Core Product Tables:**
+- `oc_product` - Main product information (model, price, status, quantity, weight)
+- `oc_product_description` - Multi-language product names, descriptions, and SEO metadata
+- `oc_product_to_category` - Product-category relationships (many-to-many)
+- `oc_category` / `oc_category_description` - Category information and descriptions
+- `oc_language` - Available languages (default: ID 1 = English)
+
+**Database Requirements:**
+- MySQL 5.7+
+- MyISAM or InnoDB storage engine
+- Required fields auto-filled by CLI: upc, ean, jan, isbn, mpn, location, manufacturer_id, stock_status_id, tax_class_id
+
+**CLI Database Integration:**
+- Supports both config.php detection and direct database connection
+- Transaction-based operations for data integrity
+- Prepared statements for security
+- Automatic validation for duplicate models and required fields
 
 ### Input and Output
 

@@ -136,9 +136,9 @@ oc modification:list
 - ✅ `extension:disable` - Disable an extension
 - ✅ `modification:list` - List installed modifications
 
-### Product Commands 🚧
-- ✅ `product:list` - List products
-- 🚧 `product:create` - Create a new product
+### Product Commands ✅
+- ✅ `product:list` - List products with filtering and search
+- ✅ `product:create` - Create a new product with full validation
 - 🚧 `product:update` - Update an existing product
 - 🚧 `product:delete` - Delete a product
 - 🚧 `category:list` - List categories
@@ -175,6 +175,38 @@ output:
 cache:
   enabled: true
 ```
+
+## Database Connection Options
+
+OC-CLI supports two methods for database connectivity:
+
+### 1. OpenCart Installation Method (Traditional)
+When running commands from within an OpenCart directory, OC-CLI automatically detects and reads database configuration from `config.php`.
+
+### 2. Direct Database Connection (New)
+For remote database access or when `config.php` is not available, use command-line database options:
+
+```bash
+# Connect directly to database
+oc product:list --db-host=localhost --db-user=oc_user --db-pass=password --db-name=opencart_db
+
+# All database connection options
+--db-host=<hostname>     # Database hostname (default: localhost)
+--db-user=<username>     # Database username
+--db-pass=<password>     # Database password
+--db-name=<database>     # Database name
+--db-port=<port>         # Database port (default: 3306)
+--db-prefix=<prefix>     # Database table prefix (default: oc_)
+```
+
+## Database Schema Reference
+
+For detailed information about OpenCart's database structure and how OC-CLI interacts with it:
+
+- **[Database Schema Documentation](docs/database-schema.md)** - Comprehensive reference for all OpenCart tables
+- **[OpenCart 2.x & 3.x Structure](tests/oc2x_and_3x_db_structure.sql)** - Complete database schema SQL file
+- **[Development Guide](docs/development.md)** - Database integration patterns for developers
+- **[Commands Reference](docs/commands.md)** - Detailed command examples with database usage
 
 ## Output Formats
 
@@ -218,10 +250,11 @@ We welcome contributions! Many commands are marked as "🚧 Coming Soon" and nee
 7. Submit a pull request
 
 **Priority commands needing implementation:**
-- Product management commands (product:list, product:create, etc.)
+- Additional product management commands (product:update, product:delete)
 - Order management commands
 - Cache management commands
 - User management commands
+- Category management commands
 
 **Development setup:**
 ```bash

@@ -51,6 +51,42 @@ abstract class Command extends BaseCommand
             InputOption::VALUE_REQUIRED,
             'Path to OpenCart installation directory'
         );
+        $this->addOption(
+            'db-host',
+            null,
+            InputOption::VALUE_REQUIRED,
+            'Database hostname'
+        );
+        $this->addOption(
+            'db-user',
+            null,
+            InputOption::VALUE_REQUIRED,
+            'Database username'
+        );
+        $this->addOption(
+            'db-pass',
+            null,
+            InputOption::VALUE_REQUIRED,
+            'Database password'
+        );
+        $this->addOption(
+            'db-name',
+            null,
+            InputOption::VALUE_REQUIRED,
+            'Database name'
+        );
+        $this->addOption(
+            'db-port',
+            null,
+            InputOption::VALUE_REQUIRED,
+            'Database port (default: 3306)'
+        );
+        $this->addOption(
+            'db-prefix',
+            null,
+            InputOption::VALUE_REQUIRED,
+            'Database table prefix (default: oc_)'
+        );
     }
 
     /**
@@ -96,9 +132,17 @@ abstract class Command extends BaseCommand
      */
     protected function requireOpenCart($require = true)
     {
+        // If database connection parameters are provided, we don't need OpenCart root
+        if ($this->input && $this->input->hasOption('db-host') && $this->input->getOption('db-host')) {
+            return true;
+        }
+
         if (!$this->openCartRoot) {
             if ($require) {
-                $this->io->error('This command must be run from an OpenCart installation directory.');
+                $this->io->error(
+                    'This command must be run from an OpenCart installation directory ' .
+                    'or provide database connection options (--db-host, --db-user, --db-pass, --db-name).'
+                );
                 return false;
             }
         }
@@ -113,6 +157,20 @@ abstract class Command extends BaseCommand
      */
     protected function getOpenCartConfig()
     {
+        // Check if database connection parameters are provided via command line options
+        if ($this->input && $this->input->hasOption('db-host') && $this->input->getOption('db-host')) {
+            return [
+                'db_hostname' => $this->input->getOption('db-host'),
+                'db_username' => $this->input->getOption('db-user'),
+                'db_password' => $this->input->getOption('db-pass'),
+                'db_database' => $this->input->getOption('db-name'),
+                'db_port' => $this->input->getOption('db-port') ?: 3306,
+                'db_prefix' => $this->input->getOption('db-prefix') ?: 'oc_',
+                'http_server' => '',
+                'https_server' => '',
+            ];
+        }
+
         if (!$this->openCartRoot) {
             return null;
         }
