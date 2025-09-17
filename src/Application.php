@@ -33,7 +33,8 @@ use OpenCart\CLI\Commands\Product\CreateCommand as ProductCreateCommand;
 
 class Application extends BaseApplication
 {
-    public const VERSION = '1.0.0';
+    // OC-CLI version
+    public const VERSION = '1.0.2';
     public const NAME = 'OC-CLI';
 
     public function __construct()
