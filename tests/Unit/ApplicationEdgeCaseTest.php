@@ -147,7 +147,7 @@ class ApplicationEdgeCaseTest extends TestCase
 
     public function testApplicationVersionAndNameConstants()
     {
-        $this->assertEquals('1.0.0', Application::VERSION);
+        $this->assertEquals('1.0.2', Application::VERSION);
         $this->assertEquals('OC-CLI', Application::NAME);
     }
 
