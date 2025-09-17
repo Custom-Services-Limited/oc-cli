@@ -13,6 +13,7 @@
 namespace OpenCart\CLI\Commands\Product;
 
 use OpenCart\CLI\Command;
+use OpenCart\CLI\Support\LanguageHelper;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputOption;
 
@@ -91,8 +92,7 @@ class ListCommand extends Command
     {
         $config = $this->getOpenCartConfig();
         $prefix = $config['db_prefix'];
-
-        $languageId = $this->getDefaultLanguageId($db);
+        $languageId = LanguageHelper::getDefaultLanguageId($db, $config);
 
         $sql = "
             SELECT DISTINCT
@@ -206,35 +206,5 @@ class ListCommand extends Command
                 );
                 break;
         }
-    }
-
-    private function getDefaultLanguageId($db)
-    {
-        $config = $this->getOpenCartConfig();
-        $prefix = $config['db_prefix'];
-
-        $languageId = null;
-
-        $result = $db->query(
-            "SELECT `value` FROM {$prefix}setting " .
-            "WHERE `code` = 'config' AND `key` = 'config_language_id' LIMIT 1"
-        );
-
-        if ($result && $result->num_rows && isset($result->row['value'])) {
-            $languageId = (int)$result->row['value'];
-        }
-
-        if (!$languageId) {
-            $languageResult = $db->query(
-                "SELECT language_id FROM {$prefix}language " .
-                "WHERE status = 1 ORDER BY sort_order ASC, name ASC LIMIT 1"
-            );
-
-            if ($languageResult && $languageResult->num_rows && isset($languageResult->row['language_id'])) {
-                $languageId = (int)$languageResult->row['language_id'];
-            }
-        }
-
-        return $languageId > 0 ? $languageId : 1;
     }
 }
