@@ -376,7 +376,7 @@ SQL;
         } else {
             // Search by name
             $sql = "SELECT cd.category_id FROM {$prefix}category_description cd 
-                    WHERE cd.name = '" . $db->escape($category) . "' AND cd.language_id = 1";
+                    WHERE cd.name = '" . $db->escape($category) . "'";
         }
 
         $result = $db->query($sql);
