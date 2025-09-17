@@ -334,40 +334,15 @@ abstract class Command extends BaseCommand
             return null;
         }
 
-        if (!empty($params)) {
-            $sql = $this->buildParameterizedSql($connection, $sql, $params);
+        if (empty($params)) {
+            return $connection->query($sql);
         }
 
-        return $connection->query($sql);
-    }
-
-    /**
-     * Replace parameter placeholders with escaped values
-     *
-     * @param object $connection
-     * @param string $sql
-     * @param array $params
-     * @return string
-     */
-    protected function buildParameterizedSql($connection, $sql, array $params)
-    {
-        foreach ($params as $param) {
-            $replacement = 'NULL';
-
-            if ($param !== null) {
-                if (is_int($param) || is_float($param)) {
-                    $replacement = (string)$param;
-                } elseif (is_bool($param)) {
-                    $replacement = $param ? '1' : '0';
-                } else {
-                    $replacement = "'" . $connection->escape((string)$param) . "'";
-                }
-            }
-
-            $sql = preg_replace('/\?/', $replacement, $sql, 1);
+        if ($connection instanceof LegacyDbAdapter) {
+            return $connection->query($sql, $params);
         }
 
-        return $sql;
+        throw new \RuntimeException('Parameterized queries are only supported when using the legacy CLI database adapter.');
     }
 
     /**

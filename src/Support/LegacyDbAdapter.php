@@ -5,6 +5,7 @@ namespace OpenCart\CLI\Support;
 use Exception;
 use mysqli;
 use mysqli_result;
+use mysqli_stmt;
 
 /**
  * Lightweight adapter that mimics OpenCart's DB API using mysqli
@@ -62,27 +63,20 @@ class LegacyDbAdapter
      * Execute a query and return an OpenCart-style result object.
      *
      * @param string $sql
+     * @param array $params
      * @return object
      * @throws Exception
      */
-    public function query($sql)
+    public function query($sql, array $params = [])
     {
+        if (!empty($params)) {
+            return $this->queryUsingPreparedStatement($sql, $params);
+        }
+
         $result = $this->connection->query($sql);
 
         if ($result instanceof mysqli_result) {
-            $data = [];
-            while ($row = $result->fetch_assoc()) {
-                $data[] = $row;
-            }
-            $result->free();
-
-            $this->affectedRows = $this->connection->affected_rows;
-
-            return (object) [
-                'row' => $data ? $data[0] : [],
-                'rows' => $data,
-                'num_rows' => count($data),
-            ];
+            return $this->createResultFromResultSet($result);
         }
 
         if ($result === true) {
@@ -96,6 +90,180 @@ class LegacyDbAdapter
         }
 
         throw new Exception($this->connection->error ?: 'Unknown database error');
+    }
+
+    /**
+     * Execute a prepared statement with parameter binding
+     *
+     * @param string $sql
+     * @param array $params
+     * @return object
+     * @throws Exception
+     */
+    private function queryUsingPreparedStatement($sql, array $params)
+    {
+        $statement = $this->connection->prepare($sql);
+
+        if (!$statement instanceof mysqli_stmt) {
+            throw new Exception($this->connection->error ?: 'Failed to prepare statement');
+        }
+
+        if (!empty($params)) {
+            [$types, $values] = $this->normaliseParameters($params);
+            $this->bindStatementParameters($statement, $types, $values);
+        }
+
+        if (!$statement->execute()) {
+            $error = $statement->error ?: $this->connection->error;
+            $statement->close();
+            throw new Exception($error ?: 'Unknown database error');
+        }
+
+        $this->affectedRows = $statement->affected_rows;
+
+        $result = $statement->get_result();
+
+        if ($result instanceof mysqli_result) {
+            $finalResult = $this->createResultFromResultSet($result, $statement->affected_rows);
+            $statement->close();
+            return $finalResult;
+        }
+
+        $rows = $this->fetchRowsWithoutMysqlnd($statement);
+        $statement->close();
+
+        return (object) [
+            'row' => $rows ? $rows[0] : [],
+            'rows' => $rows,
+            'num_rows' => count($rows),
+        ];
+    }
+
+    /**
+     * Create an OpenCart-style result object from a mysqli_result
+     *
+     * @param mysqli_result $result
+     * @return object
+     */
+    private function createResultFromResultSet(mysqli_result $result, $affectedRows = null)
+    {
+        $data = [];
+        while ($row = $result->fetch_assoc()) {
+            $data[] = $row;
+        }
+        $result->free();
+
+        if ($affectedRows !== null) {
+            $this->affectedRows = $affectedRows;
+        } else {
+            $this->affectedRows = $this->connection->affected_rows;
+        }
+
+        return (object) [
+            'row' => $data ? $data[0] : [],
+            'rows' => $data,
+            'num_rows' => count($data),
+        ];
+    }
+
+    /**
+     * Prepare parameter types and values for binding
+     *
+     * @param array $params
+     * @return array{0: string, 1: array}
+     */
+    private function normaliseParameters(array $params)
+    {
+        $types = '';
+        $values = [];
+
+        foreach ($params as $param) {
+            if ($param === null) {
+                $types .= 's';
+                $values[] = null;
+            } elseif (is_int($param) || is_bool($param)) {
+                $types .= 'i';
+                $values[] = (int)$param;
+            } elseif (is_float($param)) {
+                $types .= 'd';
+                $values[] = $param;
+            } else {
+                $types .= 's';
+                $values[] = (string)$param;
+            }
+        }
+
+        return [$types, $values];
+    }
+
+    /**
+     * Bind normalised parameters to the prepared statement
+     *
+     * @param mysqli_stmt $statement
+     * @param string $types
+     * @param array $values
+     * @return void
+     * @throws Exception
+     */
+    private function bindStatementParameters(mysqli_stmt $statement, $types, array $values)
+    {
+        $parameters = [];
+        $parameters[] = $types;
+
+        foreach ($values as $key => &$value) {
+            $parameters[] = &$value;
+        }
+
+        if (!call_user_func_array([$statement, 'bind_param'], $parameters)) {
+            throw new Exception($statement->error ?: 'Failed to bind parameters');
+        }
+    }
+
+    /**
+     * Fetch rows for environments where mysqlnd is not available
+     *
+     * @param mysqli_stmt $statement
+     * @return array
+     */
+    private function fetchRowsWithoutMysqlnd(mysqli_stmt $statement)
+    {
+        $metadata = $statement->result_metadata();
+
+        if (!$metadata) {
+            return [];
+        }
+
+        $fields = $metadata->fetch_fields();
+        $metadata->free();
+
+        if (!$fields) {
+            return [];
+        }
+
+        $row = [];
+        $bindArguments = [];
+
+        foreach ($fields as $field) {
+            $row[$field->name] = null;
+            $bindArguments[] = &$row[$field->name];
+        }
+
+        if (!call_user_func_array([$statement, 'bind_result'], $bindArguments)) {
+            return [];
+        }
+
+        $rows = [];
+        while ($statement->fetch()) {
+            $current = [];
+            foreach ($row as $column => $value) {
+                $current[$column] = $value;
+            }
+            $rows[] = $current;
+        }
+
+        $statement->free_result();
+
+        return $rows;
     }
 
     /**
