@@ -48,9 +48,9 @@ class CheckRequirementsCommandAdvancedTest extends TestCase
     {
         $method = $this->reflection->getMethod('convertToBytes');
         $method->setAccessible(true);
-        
+
         $result = $method->invoke($this->command, '512');
-        
+
         $this->assertEquals(512, $result);
     }
 
@@ -58,9 +58,9 @@ class CheckRequirementsCommandAdvancedTest extends TestCase
     {
         $method = $this->reflection->getMethod('convertToBytes');
         $method->setAccessible(true);
-        
+
         $result = $method->invoke($this->command, '2k');
-        
+
         $this->assertEquals(2048, $result);
     }
 
@@ -68,9 +68,9 @@ class CheckRequirementsCommandAdvancedTest extends TestCase
     {
         $method = $this->reflection->getMethod('convertToBytes');
         $method->setAccessible(true);
-        
+
         $result = $method->invoke($this->command, '4K');
-        
+
         $this->assertEquals(4096, $result);
     }
 
@@ -78,9 +78,9 @@ class CheckRequirementsCommandAdvancedTest extends TestCase
     {
         $method = $this->reflection->getMethod('convertToBytes');
         $method->setAccessible(true);
-        
+
         $result = $method->invoke($this->command, '16m');
-        
+
         $this->assertEquals(16777216, $result); // 16 * 1024 * 1024
     }
 
@@ -88,9 +88,9 @@ class CheckRequirementsCommandAdvancedTest extends TestCase
     {
         $method = $this->reflection->getMethod('convertToBytes');
         $method->setAccessible(true);
-        
+
         $result = $method->invoke($this->command, '32M');
-        
+
         $this->assertEquals(33554432, $result); // 32 * 1024 * 1024
     }
 
@@ -98,9 +98,9 @@ class CheckRequirementsCommandAdvancedTest extends TestCase
     {
         $method = $this->reflection->getMethod('convertToBytes');
         $method->setAccessible(true);
-        
+
         $result = $method->invoke($this->command, '2g');
-        
+
         $this->assertEquals(2147483648, $result); // 2 * 1024 * 1024 * 1024
     }
 
@@ -108,9 +108,9 @@ class CheckRequirementsCommandAdvancedTest extends TestCase
     {
         $method = $this->reflection->getMethod('convertToBytes');
         $method->setAccessible(true);
-        
+
         $result = $method->invoke($this->command, '1G');
-        
+
         $this->assertEquals(1073741824, $result); // 1 * 1024 * 1024 * 1024
     }
 
@@ -118,9 +118,9 @@ class CheckRequirementsCommandAdvancedTest extends TestCase
     {
         $method = $this->reflection->getMethod('convertToBytes');
         $method->setAccessible(true);
-        
+
         $result = $method->invoke($this->command, ' 128M ');
-        
+
         $this->assertEquals(134217728, $result); // 128 * 1024 * 1024
     }
 
@@ -128,9 +128,9 @@ class CheckRequirementsCommandAdvancedTest extends TestCase
     {
         $method = $this->reflection->getMethod('convertToBytes');
         $method->setAccessible(true);
-        
+
         $result = $method->invoke($this->command, '0');
-        
+
         $this->assertEquals(0, $result);
     }
 
@@ -138,9 +138,9 @@ class CheckRequirementsCommandAdvancedTest extends TestCase
     {
         $method = $this->reflection->getMethod('convertToBytes');
         $method->setAccessible(true);
-        
+
         $result = $method->invoke($this->command, '100x');
-        
+
         $this->assertEquals(100, $result);
     }
 
@@ -148,7 +148,7 @@ class CheckRequirementsCommandAdvancedTest extends TestCase
     {
         $method = $this->reflection->getMethod('hasFailures');
         $method->setAccessible(true);
-        
+
         $requirements = [
             'php' => [
                 ['name' => 'PHP Version', 'status' => true, 'message' => 'OK'],
@@ -158,9 +158,9 @@ class CheckRequirementsCommandAdvancedTest extends TestCase
                 ['name' => 'mysqli', 'status' => true, 'message' => 'Loaded']
             ]
         ];
-        
+
         $result = $method->invoke($this->command, $requirements);
-        
+
         $this->assertFalse($result);
     }
 
@@ -168,7 +168,7 @@ class CheckRequirementsCommandAdvancedTest extends TestCase
     {
         $method = $this->reflection->getMethod('hasFailures');
         $method->setAccessible(true);
-        
+
         $requirements = [
             'php' => [
                 ['name' => 'PHP Version', 'status' => true, 'message' => 'OK'],
@@ -178,9 +178,9 @@ class CheckRequirementsCommandAdvancedTest extends TestCase
                 ['name' => 'mysqli', 'status' => true, 'message' => 'Loaded']
             ]
         ];
-        
+
         $result = $method->invoke($this->command, $requirements);
-        
+
         $this->assertTrue($result);
     }
 
@@ -188,7 +188,7 @@ class CheckRequirementsCommandAdvancedTest extends TestCase
     {
         $method = $this->reflection->getMethod('hasFailures');
         $method->setAccessible(true);
-        
+
         $requirements = [
             'php' => [
                 ['name' => 'PHP Version', 'status' => true, 'message' => 'OK']
@@ -197,9 +197,9 @@ class CheckRequirementsCommandAdvancedTest extends TestCase
                 ['name' => 'missing_ext', 'status' => false, 'message' => 'Not loaded']
             ]
         ];
-        
+
         $result = $method->invoke($this->command, $requirements);
-        
+
         $this->assertTrue($result);
     }
 
@@ -207,11 +207,11 @@ class CheckRequirementsCommandAdvancedTest extends TestCase
     {
         $method = $this->reflection->getMethod('hasFailures');
         $method->setAccessible(true);
-        
+
         $requirements = [];
-        
+
         $result = $method->invoke($this->command, $requirements);
-        
+
         $this->assertFalse($result);
     }
 
@@ -219,16 +219,16 @@ class CheckRequirementsCommandAdvancedTest extends TestCase
     {
         $method = $this->reflection->getMethod('checkPhpRequirements');
         $method->setAccessible(true);
-        
+
         $result = $method->invoke($this->command);
-        
+
         $this->assertIsArray($result);
         $this->assertNotEmpty($result);
-        
+
         // Check that it contains expected checks
         $checkNames = array_column($result, 'name');
         $this->assertContains('PHP Version >= 7.4', $checkNames);
-        
+
         // Check structure
         foreach ($result as $check) {
             $this->assertArrayHasKey('name', $check);
@@ -242,17 +242,17 @@ class CheckRequirementsCommandAdvancedTest extends TestCase
     {
         $method = $this->reflection->getMethod('checkPhpExtensions');
         $method->setAccessible(true);
-        
+
         $result = $method->invoke($this->command);
-        
+
         $this->assertIsArray($result);
         $this->assertNotEmpty($result);
-        
+
         // Check that it contains expected extensions (with full extension name format)
         $checkNames = array_column($result, 'name');
         $this->assertContains('Extension: mysqli (recommended)', $checkNames);
         $this->assertContains('Extension: curl (required)', $checkNames);
-        
+
         // Check structure
         foreach ($result as $check) {
             $this->assertArrayHasKey('name', $check);
@@ -266,9 +266,9 @@ class CheckRequirementsCommandAdvancedTest extends TestCase
     {
         $method = $this->reflection->getMethod('checkMemoryLimit');
         $method->setAccessible(true);
-        
+
         $result = $method->invoke($this->command);
-        
+
         $this->assertIsBool($result);
     }
 
@@ -276,9 +276,9 @@ class CheckRequirementsCommandAdvancedTest extends TestCase
     {
         $method = $this->reflection->getMethod('checkExecutionTime');
         $method->setAccessible(true);
-        
+
         $result = $method->invoke($this->command);
-        
+
         $this->assertIsBool($result);
     }
 
@@ -287,14 +287,14 @@ class CheckRequirementsCommandAdvancedTest extends TestCase
         // Setup command with proper input/output
         $input = new ArrayInput(['command' => 'core:check-requirements']);
         $output = new BufferedOutput();
-        
+
         $method = $this->reflection->getMethod('displayTable');
         $method->setAccessible(true);
-        
+
         // Set up the command's input/output
         $executeMethod = $this->reflection->getMethod('execute');
         $executeMethod->setAccessible(true);
-        
+
         // Prepare sample requirements data
         $requirements = [
             'php' => [
@@ -302,22 +302,22 @@ class CheckRequirementsCommandAdvancedTest extends TestCase
                 ['name' => 'Memory Limit', 'status' => false, 'message' => 'Too low']
             ]
         ];
-        
+
         // Manually set up the command's properties
         $inputProperty = $this->reflection->getProperty('input');
         $inputProperty->setAccessible(true);
         $inputProperty->setValue($this->command, $input);
-        
+
         $outputProperty = $this->reflection->getProperty('output');
         $outputProperty->setAccessible(true);
         $outputProperty->setValue($this->command, $output);
-        
+
         $ioProperty = $this->reflection->getProperty('io');
         $ioProperty->setAccessible(true);
         $ioProperty->setValue($this->command, new \Symfony\Component\Console\Style\SymfonyStyle($input, $output));
-        
+
         $method->invoke($this->command, $requirements);
-        
+
         $outputContent = $output->fetch();
         $this->assertStringContainsString('PHP Version', $outputContent);
         $this->assertStringContainsString('Memory Limit', $outputContent);
@@ -327,15 +327,15 @@ class CheckRequirementsCommandAdvancedTest extends TestCase
     {
         $method = $this->reflection->getMethod('convertToBytes');
         $method->setAccessible(true);
-        
+
         // Test with decimal values (PHP intval truncates, so 1.5 becomes 1)
         $result = $method->invoke($this->command, '1.5M');
         $this->assertEquals(1048576, $result); // 1 * 1024 * 1024 (truncated to int)
-        
+
         // Test with negative values
         $result = $method->invoke($this->command, '-10');
         $this->assertEquals(-10, $result);
-        
+
         // Test with empty string - skip this test as it causes an error in the implementation
         // The convertToBytes method doesn't handle empty strings properly
         // $result = $method->invoke($this->command, '');
@@ -346,14 +346,14 @@ class CheckRequirementsCommandAdvancedTest extends TestCase
     {
         $method = $this->reflection->getMethod('hasFailures');
         $method->setAccessible(true);
-        
+
         $requirements = [
             'php' => [],
             'extensions' => []
         ];
-        
+
         $result = $method->invoke($this->command, $requirements);
-        
+
         $this->assertFalse($result);
     }
 
@@ -361,9 +361,9 @@ class CheckRequirementsCommandAdvancedTest extends TestCase
     {
         $method = $this->reflection->getMethod('checkRequirements');
         $method->setAccessible(true);
-        
+
         $result = $method->invoke($this->command);
-        
+
         $this->assertIsArray($result);
         $this->assertArrayHasKey('php', $result);
         $this->assertArrayHasKey('extensions', $result);

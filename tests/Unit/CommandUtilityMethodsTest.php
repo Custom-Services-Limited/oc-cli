@@ -49,9 +49,9 @@ class CommandUtilityMethodsTest extends TestCase
         $content = "define('DB_HOSTNAME', 'localhost');";
         $method = $this->reflection->getMethod('extractConfigValue');
         $method->setAccessible(true);
-        
+
         $result = $method->invoke($this->command, $content, 'DB_HOSTNAME');
-        
+
         $this->assertEquals('localhost', $result);
     }
 
@@ -60,9 +60,9 @@ class CommandUtilityMethodsTest extends TestCase
         $content = 'define("DB_USERNAME", "testuser");';
         $method = $this->reflection->getMethod('extractConfigValue');
         $method->setAccessible(true);
-        
+
         $result = $method->invoke($this->command, $content, 'DB_USERNAME');
-        
+
         $this->assertEquals('testuser', $result);
     }
 
@@ -71,9 +71,9 @@ class CommandUtilityMethodsTest extends TestCase
         $content = "define('DB_PASSWORD', \"secret123\");";
         $method = $this->reflection->getMethod('extractConfigValue');
         $method->setAccessible(true);
-        
+
         $result = $method->invoke($this->command, $content, 'DB_PASSWORD');
-        
+
         $this->assertEquals('secret123', $result);
     }
 
@@ -82,9 +82,9 @@ class CommandUtilityMethodsTest extends TestCase
         $content = "define( 'DB_DATABASE' , 'opencart_db' );";
         $method = $this->reflection->getMethod('extractConfigValue');
         $method->setAccessible(true);
-        
+
         $result = $method->invoke($this->command, $content, 'DB_DATABASE');
-        
+
         $this->assertEquals('opencart_db', $result);
     }
 
@@ -93,9 +93,9 @@ class CommandUtilityMethodsTest extends TestCase
         $content = "define('DB_PREFIX', 'oc_123_');";
         $method = $this->reflection->getMethod('extractConfigValue');
         $method->setAccessible(true);
-        
+
         $result = $method->invoke($this->command, $content, 'DB_PREFIX');
-        
+
         $this->assertEquals('oc_123_', $result);
     }
 
@@ -104,9 +104,9 @@ class CommandUtilityMethodsTest extends TestCase
         $content = "define('HTTPS_SERVER', '');";
         $method = $this->reflection->getMethod('extractConfigValue');
         $method->setAccessible(true);
-        
+
         $result = $method->invoke($this->command, $content, 'HTTPS_SERVER');
-        
+
         $this->assertEquals('', $result);
     }
 
@@ -115,9 +115,9 @@ class CommandUtilityMethodsTest extends TestCase
         $content = "define('DB_HOSTNAME', 'localhost');";
         $method = $this->reflection->getMethod('extractConfigValue');
         $method->setAccessible(true);
-        
+
         $result = $method->invoke($this->command, $content, 'NONEXISTENT');
-        
+
         $this->assertNull($result);
     }
 
@@ -126,9 +126,9 @@ class CommandUtilityMethodsTest extends TestCase
         $content = "DEFINE('db_hostname', 'localhost');";
         $method = $this->reflection->getMethod('extractConfigValue');
         $method->setAccessible(true);
-        
+
         $result = $method->invoke($this->command, $content, 'db_hostname');
-        
+
         $this->assertEquals('localhost', $result);
     }
 
@@ -137,10 +137,10 @@ class CommandUtilityMethodsTest extends TestCase
         $content = "define('DB_HOSTNAME', 'localhost');\ndefine('DB_PORT', '3306');";
         $method = $this->reflection->getMethod('extractConfigValue');
         $method->setAccessible(true);
-        
+
         $hostname = $method->invoke($this->command, $content, 'DB_HOSTNAME');
         $port = $method->invoke($this->command, $content, 'DB_PORT');
-        
+
         $this->assertEquals('localhost', $hostname);
         $this->assertEquals('3306', $port);
     }
@@ -149,9 +149,9 @@ class CommandUtilityMethodsTest extends TestCase
     {
         $method = $this->reflection->getMethod('formatBytes');
         $method->setAccessible(true);
-        
+
         $result = $method->invoke($this->command, 0);
-        
+
         $this->assertEquals('0 B', $result);
     }
 
@@ -159,9 +159,9 @@ class CommandUtilityMethodsTest extends TestCase
     {
         $method = $this->reflection->getMethod('formatBytes');
         $method->setAccessible(true);
-        
+
         $result = $method->invoke($this->command, 512);
-        
+
         $this->assertEquals('512 B', $result);
     }
 
@@ -169,9 +169,9 @@ class CommandUtilityMethodsTest extends TestCase
     {
         $method = $this->reflection->getMethod('formatBytes');
         $method->setAccessible(true);
-        
+
         $result = $method->invoke($this->command, 1024);
-        
+
         $this->assertEquals('1 KB', $result);
     }
 
@@ -179,9 +179,9 @@ class CommandUtilityMethodsTest extends TestCase
     {
         $method = $this->reflection->getMethod('formatBytes');
         $method->setAccessible(true);
-        
+
         $result = $method->invoke($this->command, 1048576); // 1024 * 1024
-        
+
         $this->assertEquals('1 MB', $result);
     }
 
@@ -189,9 +189,9 @@ class CommandUtilityMethodsTest extends TestCase
     {
         $method = $this->reflection->getMethod('formatBytes');
         $method->setAccessible(true);
-        
+
         $result = $method->invoke($this->command, 1073741824); // 1024^3
-        
+
         $this->assertEquals('1 GB', $result);
     }
 
@@ -199,9 +199,9 @@ class CommandUtilityMethodsTest extends TestCase
     {
         $method = $this->reflection->getMethod('formatBytes');
         $method->setAccessible(true);
-        
+
         $result = $method->invoke($this->command, 1099511627776); // 1024^4
-        
+
         $this->assertEquals('1 TB', $result);
     }
 
@@ -209,9 +209,9 @@ class CommandUtilityMethodsTest extends TestCase
     {
         $method = $this->reflection->getMethod('formatBytes');
         $method->setAccessible(true);
-        
+
         $result = $method->invoke($this->command, 1536); // 1.5 KB
-        
+
         $this->assertEquals('1.5 KB', $result);
     }
 
@@ -219,9 +219,9 @@ class CommandUtilityMethodsTest extends TestCase
     {
         $method = $this->reflection->getMethod('formatBytes');
         $method->setAccessible(true);
-        
+
         $result = $method->invoke($this->command, 1536, 0); // 1.5 KB with 0 precision
-        
+
         $this->assertEquals('2 KB', $result);
     }
 
@@ -229,9 +229,9 @@ class CommandUtilityMethodsTest extends TestCase
     {
         $method = $this->reflection->getMethod('formatBytes');
         $method->setAccessible(true);
-        
+
         $result = $method->invoke($this->command, 2684354560); // ~2.5 GB
-        
+
         $this->assertEquals('2.5 GB', $result);
     }
 
@@ -239,10 +239,10 @@ class CommandUtilityMethodsTest extends TestCase
     {
         $method = $this->reflection->getMethod('formatBytes');
         $method->setAccessible(true);
-        
+
         // Very large number should cap at TB
         $result = $method->invoke($this->command, 1125899906842624); // 1024^5 (1024 TB)
-        
+
         $this->assertEquals('1024 TB', $result);
     }
 
@@ -251,9 +251,9 @@ class CommandUtilityMethodsTest extends TestCase
         $content = "// define('DB_HOSTNAME', 'commented');\ndefine('DB_HOSTNAME', 'actual');";
         $method = $this->reflection->getMethod('extractConfigValue');
         $method->setAccessible(true);
-        
+
         $result = $method->invoke($this->command, $content, 'DB_HOSTNAME');
-        
+
         // The regex will match the first occurrence, even if commented
         // This tests the actual behavior of the method
         $this->assertEquals('commented', $result);
@@ -270,10 +270,10 @@ class CommandUtilityMethodsTest extends TestCase
                   "define('DB_DATABASE', 'opencart');\n" .
                   "define('DB_PORT', '3306');\n" .
                   "define('DB_PREFIX', 'oc_');\n";
-        
+
         $method = $this->reflection->getMethod('extractConfigValue');
         $method->setAccessible(true);
-        
+
         $this->assertEquals('mysqli', $method->invoke($this->command, $content, 'DB_DRIVER'));
         $this->assertEquals('localhost', $method->invoke($this->command, $content, 'DB_HOSTNAME'));
         $this->assertEquals('root', $method->invoke($this->command, $content, 'DB_USERNAME'));

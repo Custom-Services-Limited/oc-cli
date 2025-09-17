@@ -48,19 +48,19 @@ class ProductCommandValidationTest extends TestCase
         $this->command = new CreateCommand();
         $this->command->setApplication($this->application);
         $this->reflection = new ReflectionClass($this->command);
-        
+
         $input = new ArrayInput(['command' => 'product:create']);
         $this->output = new BufferedOutput();
-        
+
         // Set up command properties for validation methods that use $this->io
         $inputProperty = $this->reflection->getProperty('input');
         $inputProperty->setAccessible(true);
         $inputProperty->setValue($this->command, $input);
-        
+
         $outputProperty = $this->reflection->getProperty('output');
         $outputProperty->setAccessible(true);
         $outputProperty->setValue($this->command, $this->output);
-        
+
         $ioProperty = $this->reflection->getProperty('io');
         $ioProperty->setAccessible(true);
         $ioProperty->setValue($this->command, new SymfonyStyle($input, $this->output));
@@ -70,16 +70,16 @@ class ProductCommandValidationTest extends TestCase
     {
         $method = $this->reflection->getMethod('validateProductData');
         $method->setAccessible(true);
-        
+
         $validData = [
             'name' => 'Test Product',
             'model' => 'TEST001',
             'price' => '19.99',
             'status' => 'enabled'
         ];
-        
+
         $result = $method->invoke($this->command, $validData);
-        
+
         $this->assertTrue($result);
     }
 
@@ -87,16 +87,16 @@ class ProductCommandValidationTest extends TestCase
     {
         $method = $this->reflection->getMethod('validateProductData');
         $method->setAccessible(true);
-        
+
         $invalidData = [
             'name' => '',
             'model' => 'TEST001',
             'price' => '19.99',
             'status' => 'enabled'
         ];
-        
+
         $result = $method->invoke($this->command, $invalidData);
-        
+
         $this->assertFalse($result);
         $this->assertStringContainsString('Product name is required', $this->output->fetch());
     }
@@ -105,16 +105,16 @@ class ProductCommandValidationTest extends TestCase
     {
         $method = $this->reflection->getMethod('validateProductData');
         $method->setAccessible(true);
-        
+
         $invalidData = [
             'name' => 'Test Product',
             'model' => '',
             'price' => '19.99',
             'status' => 'enabled'
         ];
-        
+
         $result = $method->invoke($this->command, $invalidData);
-        
+
         $this->assertFalse($result);
         $this->assertStringContainsString('Product model is required', $this->output->fetch());
     }
@@ -123,16 +123,16 @@ class ProductCommandValidationTest extends TestCase
     {
         $method = $this->reflection->getMethod('validateProductData');
         $method->setAccessible(true);
-        
+
         $invalidData = [
             'name' => 'Test Product',
             'model' => 'TEST001',
             'price' => 'invalid',
             'status' => 'enabled'
         ];
-        
+
         $result = $method->invoke($this->command, $invalidData);
-        
+
         $this->assertFalse($result);
         $this->assertStringContainsString('Price must be a valid positive number', $this->output->fetch());
     }
@@ -141,16 +141,16 @@ class ProductCommandValidationTest extends TestCase
     {
         $method = $this->reflection->getMethod('validateProductData');
         $method->setAccessible(true);
-        
+
         $invalidData = [
             'name' => 'Test Product',
             'model' => 'TEST001',
             'price' => '-10.50',
             'status' => 'enabled'
         ];
-        
+
         $result = $method->invoke($this->command, $invalidData);
-        
+
         $this->assertFalse($result);
         $this->assertStringContainsString('Price must be a valid positive number', $this->output->fetch());
     }
@@ -159,16 +159,16 @@ class ProductCommandValidationTest extends TestCase
     {
         $method = $this->reflection->getMethod('validateProductData');
         $method->setAccessible(true);
-        
+
         $invalidData = [
             'name' => 'Test Product',
             'model' => 'TEST001',
             'price' => '19.99',
             'status' => 'invalid_status'
         ];
-        
+
         $result = $method->invoke($this->command, $invalidData);
-        
+
         $this->assertFalse($result);
         $this->assertStringContainsString('Status must be either "enabled" or "disabled"', $this->output->fetch());
     }
@@ -177,16 +177,16 @@ class ProductCommandValidationTest extends TestCase
     {
         $method = $this->reflection->getMethod('validateProductData');
         $method->setAccessible(true);
-        
+
         $validData = [
             'name' => 'Test Product',
             'model' => 'TEST001',
             'price' => '19.99',
             'status' => 'disabled'
         ];
-        
+
         $result = $method->invoke($this->command, $validData);
-        
+
         $this->assertTrue($result);
     }
 
@@ -194,16 +194,16 @@ class ProductCommandValidationTest extends TestCase
     {
         $method = $this->reflection->getMethod('validateProductData');
         $method->setAccessible(true);
-        
+
         $validData = [
             'name' => 'Free Product',
             'model' => 'FREE001',
             'price' => '0',
             'status' => 'enabled'
         ];
-        
+
         $result = $method->invoke($this->command, $validData);
-        
+
         $this->assertTrue($result);
     }
 
@@ -211,16 +211,16 @@ class ProductCommandValidationTest extends TestCase
     {
         $method = $this->reflection->getMethod('validateProductData');
         $method->setAccessible(true);
-        
+
         $validData = [
             'name' => 'Test Product',
             'model' => 'TEST001',
             'price' => 123.45,
             'status' => 'enabled'
         ];
-        
+
         $result = $method->invoke($this->command, $validData);
-        
+
         $this->assertTrue($result);
     }
 
@@ -228,16 +228,16 @@ class ProductCommandValidationTest extends TestCase
     {
         $method = $this->reflection->getMethod('validateProductData');
         $method->setAccessible(true);
-        
+
         $validData = [
             'name' => 'Test Product',
             'model' => 'TEST001',
             'price' => 100,
             'status' => 'enabled'
         ];
-        
+
         $result = $method->invoke($this->command, $validData);
-        
+
         $this->assertTrue($result);
     }
 
@@ -245,16 +245,16 @@ class ProductCommandValidationTest extends TestCase
     {
         $method = $this->reflection->getMethod('validateProductData');
         $method->setAccessible(true);
-        
+
         $invalidData = [
             'name' => '   ',
             'model' => 'TEST001',
             'price' => '19.99',
             'status' => 'enabled'
         ];
-        
+
         $result = $method->invoke($this->command, $invalidData);
-        
+
         // empty() returns true for whitespace-only strings when trimmed
         $this->assertTrue($result); // The method doesn't trim, so '   ' is not empty
     }
@@ -263,14 +263,14 @@ class ProductCommandValidationTest extends TestCase
     {
         $method = $this->reflection->getMethod('validateProductData');
         $method->setAccessible(true);
-        
+
         $invalidData = [
             'name' => 'Test Product'
             // Missing model, price, status
         ];
-        
+
         $result = $method->invoke($this->command, $invalidData);
-        
+
         $this->assertFalse($result);
     }
 }

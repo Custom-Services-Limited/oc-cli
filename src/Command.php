@@ -424,13 +424,15 @@ class LegacyDbAdapter
 
         $hostname = $config['db_hostname'] === 'localhost' ? '127.0.0.1' : $config['db_hostname'];
 
-        if (!$connection->real_connect(
-            $hostname,
-            $config['db_username'],
-            $config['db_password'],
-            $config['db_database'],
-            (int)$config['db_port']
-        )) {
+        if (
+            !$connection->real_connect(
+                $hostname,
+                $config['db_username'],
+                $config['db_password'],
+                $config['db_database'],
+                (int)$config['db_port']
+            )
+        ) {
             throw new \Exception($connection->connect_error ?: 'Connection failed');
         }
 

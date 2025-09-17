@@ -53,10 +53,10 @@ class ConfigCommandDisplayTest extends TestCase
         $this->command = new ConfigCommand();
         $this->command->setApplication($this->application);
         $this->reflection = new ReflectionClass($this->command);
-        
+
         $this->input = new ArrayInput(['command' => 'core:config']);
         $this->output = new BufferedOutput();
-        
+
         // Set up command properties
         $this->setCommandProperty('input', $this->input);
         $this->setCommandProperty('output', $this->output);
@@ -74,11 +74,11 @@ class ConfigCommandDisplayTest extends TestCase
     {
         $method = $this->reflection->getMethod('displayConfigTable');
         $method->setAccessible(true);
-        
+
         $config = [];
-        
+
         $method->invoke($this->command, $config, false);
-        
+
         $outputContent = $this->output->fetch();
         $this->assertStringContainsString('No configuration found', $outputContent);
     }
@@ -87,15 +87,15 @@ class ConfigCommandDisplayTest extends TestCase
     {
         $method = $this->reflection->getMethod('displayConfigTable');
         $method->setAccessible(true);
-        
+
         $config = [
             'config_name' => 'Test Store',
             'config_meta_title' => 'My Store',
             'config_email' => 'test@example.com'
         ];
-        
+
         $method->invoke($this->command, $config, false);
-        
+
         $outputContent = $this->output->fetch();
         $this->assertStringContainsString('Test Store', $outputContent);
         $this->assertStringContainsString('config_name', $outputContent);
@@ -105,14 +105,14 @@ class ConfigCommandDisplayTest extends TestCase
     {
         $method = $this->reflection->getMethod('displayConfigTable');
         $method->setAccessible(true);
-        
+
         $config = [
             'config_admin_limit' => '20',
             'config_compression' => '9'
         ];
-        
+
         $method->invoke($this->command, $config, true);
-        
+
         $outputContent = $this->output->fetch();
         $this->assertStringContainsString('Admin Configuration', $outputContent);
     }
@@ -121,7 +121,7 @@ class ConfigCommandDisplayTest extends TestCase
     {
         $method = $this->reflection->getMethod('displayConfigTable');
         $method->setAccessible(true);
-        
+
         $config = [
             'config_name' => 'Test Store',
             'config_owner' => 'John Doe',
@@ -129,11 +129,11 @@ class ConfigCommandDisplayTest extends TestCase
             'config_email' => 'test@example.com',
             'config_telephone' => '+1234567890'
         ];
-        
+
         $method->invoke($this->command, $config, false);
-        
+
         $outputContent = $this->output->fetch();
-        
+
         // Check that all config items are displayed
         $this->assertStringContainsString('config_name', $outputContent);
         $this->assertStringContainsString('Test Store', $outputContent);
@@ -147,14 +147,14 @@ class ConfigCommandDisplayTest extends TestCase
     {
         $method = $this->reflection->getMethod('displayConfigTable');
         $method->setAccessible(true);
-        
+
         $longValue = str_repeat('A', 100);
         $config = [
             'config_description' => $longValue
         ];
-        
+
         $method->invoke($this->command, $config, false);
-        
+
         $outputContent = $this->output->fetch();
         $this->assertStringContainsString('config_description', $outputContent);
         // Should handle long values appropriately
@@ -165,15 +165,15 @@ class ConfigCommandDisplayTest extends TestCase
     {
         $method = $this->reflection->getMethod('displayConfigTable');
         $method->setAccessible(true);
-        
+
         $config = [
             'config_name' => 'Ståre with Spëcial Chàrs',
             'config_currency' => 'USD ($)',
             'config_meta' => 'Description with "quotes" and <tags>'
         ];
-        
+
         $method->invoke($this->command, $config, false);
-        
+
         $outputContent = $this->output->fetch();
         $this->assertStringContainsString('Ståre with Spëcial Chàrs', $outputContent);
         $this->assertStringContainsString('USD ($)', $outputContent);
