@@ -342,7 +342,9 @@ abstract class Command extends BaseCommand
             return $connection->query($sql, $params);
         }
 
-        throw new \RuntimeException('Parameterized queries are only supported when using the legacy CLI database adapter.');
+        throw new \RuntimeException(
+            'Parameterized queries are only supported when using the legacy CLI database adapter.'
+        );
     }
 
     /**
