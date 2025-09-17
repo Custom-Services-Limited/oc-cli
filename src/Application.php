@@ -28,10 +28,13 @@ use OpenCart\CLI\Commands\Extension\InstallCommand;
 use OpenCart\CLI\Commands\Extension\EnableCommand;
 use OpenCart\CLI\Commands\Extension\DisableCommand;
 use OpenCart\CLI\Commands\Extension\ModificationListCommand;
+use OpenCart\CLI\Commands\Product\ListCommand as ProductListCommand;
+use OpenCart\CLI\Commands\Product\CreateCommand as ProductCreateCommand;
 
 class Application extends BaseApplication
 {
-    public const VERSION = '1.0.0';
+    // OC-CLI version
+    public const VERSION = '1.0.2';
     public const NAME = 'OC-CLI';
 
     public function __construct()
@@ -69,6 +72,8 @@ class Application extends BaseApplication
         $commands[] = new EnableCommand();
         $commands[] = new DisableCommand();
         $commands[] = new ModificationListCommand();
+        $commands[] = new ProductListCommand();
+        $commands[] = new ProductCreateCommand();
 
         return $commands;
     }

@@ -44,8 +44,8 @@ class InstallCommand extends Command
             return 1;
         }
 
-        $connection = $this->getDatabaseConnection();
-        if (!$connection) {
+        $db = $this->getDatabaseConnection();
+        if (!$db) {
             $this->io->error('Could not connect to database.');
             return 1;
         }
@@ -60,14 +60,12 @@ class InstallCommand extends Command
             $this->io->text('This feature is designed for OpenCart 3 with OCMOD support.');
 
             if (!$this->io->confirm('Continue anyway?', false)) {
-                $connection->close();
                 return 0;
             }
         }
 
         // Validate extension file
         if (!$this->validateExtensionFile($extensionPath)) {
-            $connection->close();
             return 1;
         }
 
@@ -76,14 +74,14 @@ class InstallCommand extends Command
 
         try {
             $extensionData = $this->extractExtensionData($extensionPath);
-            $installId = $this->installExtension($connection, $extensionData);
+            $installId = $this->installExtension($db, $extensionData);
 
             if ($installId) {
                 $this->io->success("Extension '{$extensionData['name']}' installed successfully.");
 
                 if ($activate) {
                     $this->io->text('Activating extension...');
-                    if ($this->activateExtension($connection, $installId, $extensionData)) {
+                    if ($this->activateExtension($db, $installId, $extensionData)) {
                         $this->io->success('Extension activated successfully.');
                     } else {
                         $this->io->warning('Extension installed but activation failed.');
@@ -91,16 +89,13 @@ class InstallCommand extends Command
                 }
             } else {
                 $this->io->error('Extension installation failed.');
-                $connection->close();
                 return 1;
             }
         } catch (\Exception $e) {
             $this->io->error("Installation failed: " . $e->getMessage());
-            $connection->close();
             return 1;
         }
 
-        $connection->close();
         return 0;
     }
 
@@ -175,74 +170,83 @@ class InstallCommand extends Command
         }
     }
 
-    private function installExtension($connection, $data)
+    private function installExtension($db, $data)
     {
         $config = $this->getOpenCartConfig();
         $prefix = $config['db_prefix'];
 
         // Check if extension is already installed
-        $checkSql = "SELECT extension_install_id FROM {$prefix}extension_install WHERE code = ?";
-        $stmt = $connection->prepare($checkSql);
-        $stmt->bind_param('s', $data['code']);
-        $stmt->execute();
-        $result = $stmt->get_result();
+        $extensionCode = $db->escape($data['code']);
+        $checkSql = "SELECT extension_install_id FROM {$prefix}extension_install WHERE code = '{$extensionCode}'";
+        $result = $db->query($checkSql);
 
-        if ($result->fetch_assoc()) {
+        if ($result && $result->num_rows) {
             throw new \Exception("Extension '{$data['code']}' is already installed.");
         }
 
         // Insert into extension_install table
-        $sql = "
-            INSERT INTO {$prefix}extension_install 
-            (type, code, name, version, author, filename, date_added) 
-            VALUES (?, ?, ?, ?, ?, ?, NOW())
-        ";
+        $values = [
+            $db->escape($data['type']),
+            $extensionCode,
+            $db->escape($data['name']),
+            $db->escape($data['version']),
+            $db->escape($data['author']),
+            $db->escape($data['filename']),
+        ];
 
-        $stmt = $connection->prepare($sql);
-        $stmt->bind_param(
-            'ssssss',
-            $data['type'],
-            $data['code'],
-            $data['name'],
-            $data['version'],
-            $data['author'],
-            $data['filename']
-        );
+        $insertSql = <<<SQL
+INSERT INTO {$prefix}extension_install (
+    type,
+    code,
+    name,
+    version,
+    author,
+    filename,
+    date_added
+) VALUES (
+    '{$values[0]}',
+    '{$values[1]}',
+    '{$values[2]}',
+    '{$values[3]}',
+    '{$values[4]}',
+    '{$values[5]}',
+    NOW()
+)
+SQL;
 
-        if ($stmt->execute()) {
-            $installId = $connection->insert_id;
+        $db->query($insertSql);
 
-            // Add to extension_path table if applicable
-            $this->addExtensionPath($connection, $installId, $data);
+        $installId = $db->getLastId();
 
-            return $installId;
-        }
+        // Add to extension_path table if applicable
+        $this->addExtensionPath($db, $installId, $data);
 
-        return false;
+        return $installId;
     }
 
-    private function addExtensionPath($connection, $installId, $data)
+    private function addExtensionPath($db, $installId, $data)
     {
         $config = $this->getOpenCartConfig();
         $prefix = $config['db_prefix'];
 
-        $sql = "INSERT INTO {$prefix}extension_path (extension_install_id, path) VALUES (?, ?)";
-        $stmt = $connection->prepare($sql);
-        $stmt->bind_param('is', $installId, $data['path']);
-        $stmt->execute();
+        $db->query(
+            "INSERT INTO {$prefix}extension_path (extension_install_id, path) VALUES (" .
+            (int)$installId . ", '" . $db->escape($data['path']) . "')"
+        );
     }
 
-    private function activateExtension($connection, $installId, $data)
+    private function activateExtension($db, $installId, $data)
     {
         $config = $this->getOpenCartConfig();
         $prefix = $config['db_prefix'];
 
         // Add to extension table to activate
-        $sql = "INSERT INTO {$prefix}extension (extension_install_id, type, code) VALUES (?, ?, ?)";
-        $stmt = $connection->prepare($sql);
-        $stmt->bind_param('iss', $installId, $data['type'], $data['code']);
+        $db->query(
+            "INSERT INTO {$prefix}extension (extension_install_id, type, code) VALUES (" .
+            (int)$installId . ", '" . $db->escape($data['type']) . "', '" . $db->escape($data['code']) . "')"
+        );
 
-        return $stmt->execute();
+        return $db->countAffected() > 0;
     }
 
     private function getOpenCartVersion()

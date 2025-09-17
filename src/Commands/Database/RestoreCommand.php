@@ -56,8 +56,8 @@ class RestoreCommand extends Command
             return 1;
         }
 
-        $connection = $this->getDatabaseConnection();
-        if (!$connection) {
+        $db = $this->getDatabaseConnection();
+        if (!$db) {
             $this->io->error('Could not connect to database.');
             return 1;
         }
@@ -67,14 +67,12 @@ class RestoreCommand extends Command
         // Check if file exists
         if (!file_exists($filename)) {
             $this->io->error("Backup file not found: {$filename}");
-            $connection->close();
             return 1;
         }
 
         // Check if file is readable
         if (!is_readable($filename)) {
             $this->io->error("Backup file is not readable: {$filename}");
-            $connection->close();
             return 1;
         }
 
@@ -91,26 +89,23 @@ class RestoreCommand extends Command
             $this->io->warning('This will replace all data in the current database!');
             if (!$this->io->confirm('Are you sure you want to continue?', false)) {
                 $this->io->text('Restore cancelled.');
-                $connection->close();
                 return 0;
             }
         }
 
         // Perform restore
         try {
-            $this->restoreFromBackup($connection, $filename);
+            $this->restoreFromBackup($db, $filename);
             $this->io->success('Database restored successfully.');
         } catch (\Exception $e) {
             $this->io->error("Restore failed: " . $e->getMessage());
-            $connection->close();
             return 1;
         }
 
-        $connection->close();
         return 0;
     }
 
-    private function restoreFromBackup($connection, $filename)
+    private function restoreFromBackup($db, $filename)
     {
         $ignoreErrors = $this->input->getOption('ignore-errors');
 
@@ -130,7 +125,7 @@ class RestoreCommand extends Command
         $this->io->text('Starting restore...');
 
         // Disable foreign key checks
-        $connection->query('SET FOREIGN_KEY_CHECKS=0');
+        $db->query('SET FOREIGN_KEY_CHECKS=0');
 
         $lineNumber = 0;
         $queryBuffer = '';
@@ -161,31 +156,31 @@ class RestoreCommand extends Command
                 $queryBuffer = '';
 
                 if (!empty($query)) {
-                    $result = $connection->query($query);
-
-                    if ($result === false) {
-                        $error = "Line {$lineNumber}: " . $connection->error;
-                        $errors[] = $error;
-
-                        if (!$ignoreErrors) {
-                            throw new \Exception("SQL Error at line {$lineNumber}: " . $connection->error);
-                        }
-
-                        $this->io->warning("SQL Error at line {$lineNumber}: " . $connection->error);
-                    } else {
+                    try {
+                        $db->query($query);
                         $queriesExecuted++;
 
                         // Show progress every 100 queries
                         if ($queriesExecuted % 100 === 0) {
                             $this->io->text("Executed {$queriesExecuted} queries...");
                         }
+                    } catch (\Exception $exception) {
+                        $errorMessage = $exception->getMessage();
+                        $error = "Line {$lineNumber}: {$errorMessage}";
+                        $errors[] = $error;
+
+                        if (!$ignoreErrors) {
+                            throw new \Exception("SQL Error at line {$lineNumber}: {$errorMessage}", 0, $exception);
+                        }
+
+                        $this->io->warning("SQL Error at line {$lineNumber}: {$errorMessage}");
                     }
                 }
             }
         }
 
         // Re-enable foreign key checks
-        $connection->query('SET FOREIGN_KEY_CHECKS=1');
+        $db->query('SET FOREIGN_KEY_CHECKS=1');
 
         // Close file handle
         if ($isCompressed) {

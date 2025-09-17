@@ -193,7 +193,7 @@ class RealOpenCartTest extends TestCase
             $json = json_decode($output, true);
             $this->assertIsArray($json);
             $this->assertEquals('3.0.3.8', $json['opencart']);
-            $this->assertEquals('1.0.0', $json['oc-cli']);
+            $this->assertEquals('1.0.2', $json['oc-cli']);
             $this->assertArrayHasKey('php', $json);
             $this->assertArrayHasKey('os', $json);
         } finally {

@@ -45,30 +45,28 @@ class ListCommand extends Command
             return 1;
         }
 
-        $connection = $this->getDatabaseConnection();
-        if (!$connection) {
+        $db = $this->getDatabaseConnection();
+        if (!$db) {
             $this->io->error('Could not connect to database.');
             return 1;
         }
 
         $type = $this->input->getArgument('type');
-        $extensions = $this->getExtensions($connection, $type);
+        $extensions = $this->getExtensions($db, $type);
 
         if (empty($extensions)) {
             $message = $type
                 ? "No extensions found for type '{$type}'."
                 : 'No extensions found.';
             $this->io->warning($message);
-            $connection->close();
             return 0;
         }
 
         $this->displayExtensions($extensions);
-        $connection->close();
         return 0;
     }
 
-    private function getExtensions($connection, $type = null)
+    private function getExtensions($db, $type = null)
     {
         $config = $this->getOpenCartConfig();
         $prefix = $config['db_prefix'];
@@ -82,18 +80,14 @@ class ListCommand extends Command
         ";
 
         if ($type) {
-            $sql .= " WHERE e.type = ?";
-            $stmt = $connection->prepare($sql);
-            $stmt->bind_param('s', $type);
-            $stmt->execute();
-            $result = $stmt->get_result();
-        } else {
-            $result = $connection->query($sql);
+            $sql .= " WHERE e.type = '" . $db->escape($type) . "'";
         }
 
+        $result = $db->query($sql);
+
         $extensions = [];
-        if ($result) {
-            while ($row = $result->fetch_assoc()) {
+        if ($result && !empty($result->rows)) {
+            foreach ($result->rows as $row) {
                 $extensions[] = [
                     'type' => $row['type'],
                     'code' => $row['code'],

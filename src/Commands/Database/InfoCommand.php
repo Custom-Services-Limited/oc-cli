@@ -46,42 +46,38 @@ class InfoCommand extends Command
         }
 
         // Test database connection
-        $connection = $this->getDatabaseConnection();
-        $connectionStatus = $connection ? 'Connected' : 'Failed';
+        $db = $this->getDatabaseConnection();
+        $connectionStatus = $db ? 'Connected' : 'Failed';
 
         // Get database size and table count if connected
         $databaseSize = null;
         $tableCount = null;
         $serverVersion = null;
 
-        if ($connection) {
-            // Get server version
-            $serverVersion = $connection->server_info;
-
-            // Get database size
-            $result = $connection->query("
-                SELECT 
-                    ROUND(SUM(data_length + index_length) / 1024 / 1024, 2) as size_mb
-                FROM information_schema.tables 
-                WHERE table_schema = '{$config['db_database']}'
-            ");
-
-            if ($result && $row = $result->fetch_assoc()) {
-                $databaseSize = $row['size_mb'] . ' MB';
+        if ($db) {
+            $versionResult = $db->query('SELECT VERSION() AS version');
+            if ($versionResult && isset($versionResult->row['version'])) {
+                $serverVersion = $versionResult->row['version'];
             }
 
-            // Get table count
-            $result = $connection->query("
-                SELECT COUNT(*) as count 
-                FROM information_schema.tables 
-                WHERE table_schema = '{$config['db_database']}'
-            ");
+            $dbNameEscaped = $db->escape($config['db_database']);
 
-            if ($result && $row = $result->fetch_assoc()) {
-                $tableCount = $row['count'];
+            $sizeResult = $db->query(
+                "SELECT ROUND(SUM(data_length + index_length) / 1024 / 1024, 2) AS size_mb " .
+                "FROM information_schema.tables WHERE table_schema = '{$dbNameEscaped}'"
+            );
+
+            if ($sizeResult && isset($sizeResult->row['size_mb'])) {
+                $databaseSize = $sizeResult->row['size_mb'] . ' MB';
             }
 
-            $connection->close();
+            $countResult = $db->query(
+                "SELECT COUNT(*) AS count FROM information_schema.tables WHERE table_schema = '{$dbNameEscaped}'"
+            );
+
+            if ($countResult && isset($countResult->row['count'])) {
+                $tableCount = $countResult->row['count'];
+            }
         }
 
         $info = [

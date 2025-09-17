@@ -244,7 +244,7 @@ class VersionCommandCompleteTest extends TestCase
             $json = json_decode($output, true);
             $this->assertIsArray($json);
             $this->assertEquals('4.0.0.0', $json['opencart']);
-            $this->assertEquals('1.0.0', $json['oc-cli']);
+            $this->assertEquals('1.0.2', $json['oc-cli']);
             $this->assertArrayHasKey('php', $json);
             $this->assertArrayHasKey('os', $json);
         } finally {
@@ -266,7 +266,7 @@ class VersionCommandCompleteTest extends TestCase
             $this->assertEquals(0, $this->commandTester->getStatusCode());
             $output = $this->commandTester->getDisplay();
 
-            $this->assertStringContainsString('oc-cli: 1.0.0', $output);
+            $this->assertStringContainsString('oc-cli: 1.0.2', $output);
             $this->assertStringContainsString('opencart: 3.0.3.8', $output);
             $this->assertStringContainsString('php: ' . PHP_VERSION, $output);
         } finally {
@@ -327,7 +327,7 @@ class VersionCommandCompleteTest extends TestCase
             $json = json_decode($output, true);
             $this->assertIsArray($json);
             $this->assertEquals('3.0.4.0', $json['opencart']);
-            $this->assertEquals('1.0.0', $json['oc-cli']);
+            $this->assertEquals('1.0.2', $json['oc-cli']);
             $this->assertArrayHasKey('php', $json);
             $this->assertArrayHasKey('os', $json);
         } finally {

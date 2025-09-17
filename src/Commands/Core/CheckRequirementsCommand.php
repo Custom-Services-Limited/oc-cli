@@ -223,25 +223,31 @@ class CheckRequirementsCommand extends Command
             return $checks;
         }
 
-        $connection = $this->getDatabaseConnection();
+        $db = $this->getDatabaseConnection();
 
         $checks[] = [
             'name' => 'Database Connection',
-            'status' => $connection !== null,
-            'message' => $connection ? 'Connected' : 'Failed to connect',
+            'status' => $db !== null,
+            'message' => $db ? 'Connected' : 'Failed to connect',
         ];
 
-        if ($connection) {
-            $version = $connection->server_version;
-            $versionString = $connection->server_info;
+        if ($db) {
+            $versionResult = $db->query('SELECT VERSION() AS version');
+            $hasVersion = $versionResult && isset($versionResult->row['version']);
+            $versionString = $hasVersion ? $versionResult->row['version'] : 'unknown';
+
+            $numericVersion = 0;
+            if ($versionString !== 'unknown') {
+                $clean = preg_replace('/[^0-9.]/', '', $versionString);
+                $parts = array_pad(explode('.', $clean), 3, 0);
+                $numericVersion = ((int)$parts[0]) * 10000 + ((int)$parts[1]) * 100 + (int)$parts[2];
+            }
 
             $checks[] = [
                 'name' => 'MySQL Version >= 5.6',
-                'status' => $version >= 50600,
+                'status' => $numericVersion >= 50600,
                 'message' => 'Current: ' . $versionString,
             ];
-
-            $connection->close();
         }
 
         return $checks;

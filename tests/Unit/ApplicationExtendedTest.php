@@ -27,7 +27,7 @@ class ApplicationExtendedTest extends TestCase
 
         // Test that it contains the expected format with HTML tags
         $this->assertStringContainsString('<info>OC-CLI</info>', $longVersion);
-        $this->assertStringContainsString('<comment>1.0.0</comment>', $longVersion);
+        $this->assertStringContainsString('<comment>1.0.2</comment>', $longVersion);
         $this->assertStringContainsString('version', $longVersion);
     }
 
@@ -179,9 +179,9 @@ class ApplicationExtendedTest extends TestCase
         $app = new Application();
 
         $this->assertEquals('OC-CLI', $app->getName());
-        $this->assertEquals('1.0.0', $app->getVersion());
+        $this->assertEquals('1.0.2', $app->getVersion());
         $this->assertEquals('OC-CLI', Application::NAME);
-        $this->assertEquals('1.0.0', Application::VERSION);
+        $this->assertEquals('1.0.2', Application::VERSION);
     }
 
     public function testGetDefaultCommandsIncludesVersionCommand()

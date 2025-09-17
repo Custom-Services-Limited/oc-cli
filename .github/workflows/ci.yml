@@ -6,9 +6,14 @@ on:
   pull_request:
     branches: [ main, develop ]
 
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ${{ matrix.operating-system }}
+    permissions:
+      contents: read
     
     strategy:
       fail-fast: false
@@ -65,6 +70,8 @@ jobs:
   code-quality:
     runs-on: ubuntu-latest
     name: Code Quality
+    permissions:
+      contents: read
 
     steps:
     - uses: actions/checkout@v4
@@ -98,6 +105,8 @@ jobs:
   security:
     runs-on: ubuntu-latest
     name: Security Scan
+    permissions:
+      contents: read
 
     steps:
     - uses: actions/checkout@v4
@@ -121,6 +130,8 @@ jobs:
     name: Build PHAR
     needs: [test, code-quality]
     if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
 
     steps:
     - uses: actions/checkout@v4
@@ -156,6 +167,8 @@ jobs:
   documentation:
     runs-on: ubuntu-latest
     name: Documentation Check
+    permissions:
+      contents: read
 
     steps:
     - uses: actions/checkout@v4

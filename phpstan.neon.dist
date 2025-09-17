@@ -39,6 +39,7 @@ parameters:
     # Bootstrap for better understanding of the codebase
     bootstrapFiles:
         - vendor/autoload.php
+        - stubs/opencart-db.php
     
     # Check PHP compatibility
     phpVersion: 70100

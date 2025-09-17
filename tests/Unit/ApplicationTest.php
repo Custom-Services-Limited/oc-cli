@@ -84,7 +84,7 @@ class ApplicationTest extends TestCase
         $longVersion = $app->getLongVersion();
 
         $this->assertStringContainsString('OC-CLI', $longVersion);
-        $this->assertStringContainsString('1.0.0', $longVersion);
+        $this->assertStringContainsString('1.0.2', $longVersion);
     }
 
     /**
