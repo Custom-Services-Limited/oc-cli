@@ -101,8 +101,8 @@ class CreateCommand extends Command
             return 1;
         }
 
-        $connection = $this->getDatabaseConnection();
-        if (!$connection) {
+        $db = $this->getDatabaseConnection();
+        if (!$db) {
             $this->io->error('Could not connect to database.');
             return 1;
         }
@@ -111,34 +111,29 @@ class CreateCommand extends Command
         $productData = $this->getProductData();
 
         if (!$productData) {
-            $connection->close();
             return 1;
         }
 
         // Validate required fields
         if (!$this->validateProductData($productData)) {
-            $connection->close();
             return 1;
         }
 
         // Check for duplicate model
-        if ($this->modelExists($connection, $productData['model'])) {
+        if ($this->modelExists($db, $productData['model'])) {
             $this->io->error("Product with model '{$productData['model']}' already exists.");
-            $connection->close();
             return 1;
         }
 
         // Create the product
-        $productId = $this->createProduct($connection, $productData);
+        $productId = $this->createProduct($db, $productData);
 
         if (!$productId) {
             $this->io->error('Failed to create product.');
-            $connection->close();
             return 1;
         }
 
         $this->displayResult($productId, $productData);
-        $connection->close();
         return 0;
     }
 
@@ -239,120 +234,97 @@ class CreateCommand extends Command
         return true;
     }
 
-    private function modelExists($connection, $model)
+    private function modelExists($db, $model)
     {
         $config = $this->getOpenCartConfig();
         $prefix = $config['db_prefix'];
 
-        $sql = "SELECT COUNT(*) as count FROM {$prefix}product WHERE model = ?";
-        $stmt = $connection->prepare($sql);
-        $stmt->bind_param('s', $model);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $row = $result->fetch_assoc();
+        $sql = "SELECT COUNT(*) AS count FROM {$prefix}product WHERE model = '" . $db->escape($model) . "'";
+        $result = $db->query($sql);
 
-        return $row['count'] > 0;
+        return $result && isset($result->row['count']) ? (int)$result->row['count'] > 0 : false;
     }
 
-    private function createProduct($connection, $data)
+    private function createProduct($db, $data)
     {
         $config = $this->getOpenCartConfig();
         $prefix = $config['db_prefix'];
 
-        // Start transaction
-        $connection->autocommit(false);
-
         try {
+            $db->query('START TRANSACTION');
+
             // Insert into oc_product
-            $sql = "INSERT INTO {$prefix}product (
-                model, sku, upc, ean, jan, isbn, mpn, location,
-                price, quantity, status, weight, manufacturer_id,
-                stock_status_id, shipping, tax_class_id, 
-                date_available, date_added, date_modified
-            ) VALUES (?, ?, '', '', '', '', '', '', ?, ?, ?, ?, 0, 7, 1, 0, CURDATE(), NOW(), NOW())";
-
-            $stmt = $connection->prepare($sql);
             $status = $data['status'] === 'enabled' ? 1 : 0;
+            $model = $db->escape($data['model']);
+            $sku = $db->escape($data['sku']);
+            $price = (float)$data['price'];
+            $quantity = (int)$data['quantity'];
+            $statusInt = (int)$status;
+            $weight = (float)$data['weight'];
 
-            $stmt->bind_param(
-                'ssdiid',
-                $data['model'],
-                $data['sku'],
-                $data['price'],
-                $data['quantity'],
-                $status,
-                $data['weight']
+            $db->query(
+                "INSERT INTO {$prefix}product (" .
+                "model, sku, upc, ean, jan, isbn, mpn, location, " .
+                "price, quantity, status, weight, manufacturer_id, " .
+                "stock_status_id, shipping, tax_class_id, date_available, date_added, date_modified" .
+                ") VALUES ('{$model}', '{$sku}', '', '', '', '', '', '', {$price}, {$quantity}, {$statusInt}, {$weight}, 0, 7, 1, 0, CURDATE(), NOW(), NOW())"
             );
 
-            if (!$stmt->execute()) {
-                throw new \Exception('Failed to insert product: ' . $stmt->error);
-            }
-
-            $productId = $connection->insert_id;
+            $productId = $db->getLastId();
 
             // Insert into oc_product_description
-            $sql = "INSERT INTO {$prefix}product_description (
-                product_id, language_id, name, description, tag, meta_title, meta_description, meta_keyword
-            ) VALUES (?, 1, ?, ?, '', ?, '', '')";
+            $name = $db->escape($data['name']);
+            $description = $db->escape($data['description']);
+            $productIdInt = (int)$productId;
 
-            $stmt = $connection->prepare($sql);
-            $stmt->bind_param(
-                'isss',
-                $productId,
-                $data['name'],
-                $data['description'],
-                $data['name']
+            $db->query(
+                "INSERT INTO {$prefix}product_description (" .
+                "product_id, language_id, name, description, tag, meta_title, meta_description, meta_keyword" .
+                ") VALUES ({$productIdInt}, 1, '{$name}', '{$description}', '', '{$name}', '', '')"
             );
-
-            if (!$stmt->execute()) {
-                throw new \Exception('Failed to insert product description: ' . $stmt->error);
-            }
 
             // Insert into oc_product_to_category if category is specified
             if (!empty($data['category'])) {
-                $categoryId = $this->getCategoryId($connection, $data['category']);
+                $categoryId = $this->getCategoryId($db, $data['category']);
                 if ($categoryId) {
-                    $sql = "INSERT INTO {$prefix}product_to_category (product_id, category_id) VALUES (?, ?)";
-                    $stmt = $connection->prepare($sql);
-                    $stmt->bind_param('ii', $productId, $categoryId);
-                    $stmt->execute();
+                    $db->query(
+                        "INSERT INTO {$prefix}product_to_category (product_id, category_id) VALUES (" .
+                        $productIdInt . ', ' . (int)$categoryId . ')'
+                    );
                 }
             }
 
             // Commit transaction
-            $connection->commit();
+            $db->query('COMMIT');
             return $productId;
         } catch (\Exception $e) {
             // Rollback transaction
-            $connection->rollback();
+            try {
+                $db->query('ROLLBACK');
+            } catch (\Exception $rollbackException) {
+                // Ignore rollback failure
+            }
             $this->io->error('Transaction failed: ' . $e->getMessage());
             return false;
-        } finally {
-            $connection->autocommit(true);
         }
     }
 
-    private function getCategoryId($connection, $category)
+    private function getCategoryId($db, $category)
     {
         $config = $this->getOpenCartConfig();
         $prefix = $config['db_prefix'];
 
         // If category is numeric, assume it's an ID
         if (is_numeric($category)) {
-            $sql = "SELECT category_id FROM {$prefix}category WHERE category_id = ?";
-            $stmt = $connection->prepare($sql);
-            $stmt->bind_param('i', $category);
+            $sql = "SELECT category_id FROM {$prefix}category WHERE category_id = " . (int)$category;
         } else {
             // Search by name
             $sql = "SELECT cd.category_id FROM {$prefix}category_description cd 
-                    WHERE cd.name = ? AND cd.language_id = 1";
-            $stmt = $connection->prepare($sql);
-            $stmt->bind_param('s', $category);
+                    WHERE cd.name = '" . $db->escape($category) . "' AND cd.language_id = 1";
         }
 
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $row = $result->fetch_assoc();
+        $result = $db->query($sql);
+        $row = $result ? $result->row : null;
 
         return $row ? $row['category_id'] : null;
     }

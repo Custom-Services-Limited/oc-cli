@@ -41,6 +41,11 @@ abstract class Command extends BaseCommand
     protected $openCartRoot;
 
     /**
+     * @var \DB|null
+     */
+    protected $dbConnection;
+
+    /**
      * Configure the command with global options
      */
     protected function configure()
@@ -86,6 +91,12 @@ abstract class Command extends BaseCommand
             null,
             InputOption::VALUE_REQUIRED,
             'Database table prefix (default: oc_)'
+        );
+        $this->addOption(
+            'db-driver',
+            null,
+            InputOption::VALUE_REQUIRED,
+            'Database driver (default: mysqli)'
         );
     }
 
@@ -166,8 +177,10 @@ abstract class Command extends BaseCommand
                 'db_database' => $this->input->getOption('db-name'),
                 'db_port' => $this->input->getOption('db-port') ?: 3306,
                 'db_prefix' => $this->input->getOption('db-prefix') ?: 'oc_',
+                'db_driver' => $this->input->getOption('db-driver') ?: 'mysqli',
                 'http_server' => '',
                 'https_server' => '',
+                'dir_system' => $this->openCartRoot ? rtrim($this->openCartRoot, '/\\') . '/system/' : null,
             ];
         }
 
@@ -193,8 +206,10 @@ abstract class Command extends BaseCommand
             'db_database' => $this->extractConfigValue($content, 'DB_DATABASE'),
             'db_port' => $this->extractConfigValue($content, 'DB_PORT') ?: 3306,
             'db_prefix' => $this->extractConfigValue($content, 'DB_PREFIX') ?: '',
+            'db_driver' => $this->extractConfigValue($content, 'DB_DRIVER') ?: 'mysqli',
             'http_server' => $this->extractConfigValue($content, 'HTTP_SERVER'),
             'https_server' => $this->extractConfigValue($content, 'HTTPS_SERVER'),
+            'dir_system' => $this->extractConfigValue($content, 'DIR_SYSTEM') ?: ($this->openCartRoot ? rtrim($this->openCartRoot, '/\\') . '/system/' : null),
         ];
 
         return $config;
@@ -222,45 +237,59 @@ abstract class Command extends BaseCommand
     /**
      * Get database connection
      *
-     * @return \mysqli|null
+     * @return \DB|null
      */
     protected function getDatabaseConnection()
     {
+        if ($this->dbConnection instanceof \DB) {
+            return $this->dbConnection;
+        }
+
         $config = $this->getOpenCartConfig();
         if (!$config) {
             return null;
         }
 
-        try {
-            // Set connection timeout to prevent hanging in tests
-            ini_set('default_socket_timeout', 2);
+        $systemDir = isset($config['dir_system']) ? rtrim($config['dir_system'], '/\\') . '/' : null;
 
-            // Create mysqli instance and set timeouts before connecting
-            $connection = mysqli_init();
-            $connection->options(MYSQLI_OPT_CONNECT_TIMEOUT, 2);
-            if (PHP_VERSION_ID >= 70200) {
-                $connection->options(MYSQLI_OPT_READ_TIMEOUT, 2);
+        if (!$systemDir || !is_dir($systemDir)) {
+            if ($this->openCartRoot) {
+                $systemDir = rtrim($this->openCartRoot, '/\\') . '/system/';
             }
+        }
 
-            $success = $connection->real_connect(
-                $config['db_hostname'] === 'localhost' ? '127.0.0.1' : $config['db_hostname'],
+        if (!$systemDir || !file_exists($systemDir . 'library/db.php')) {
+            $this->io->error('Unable to locate OpenCart database library (system/library/db.php).');
+            return null;
+        }
+
+        require_once $systemDir . 'library/db.php';
+
+        $driver = $config['db_driver'] ?: 'mysqli';
+        $driverFile = $systemDir . 'library/db/' . $driver . '.php';
+
+        if (!file_exists($driverFile)) {
+            $this->io->error("OpenCart database driver not found: {$driverFile}");
+            return null;
+        }
+
+        require_once $driverFile;
+
+        try {
+            $this->dbConnection = new \DB(
+                $driver,
+                $config['db_hostname'],
                 $config['db_username'],
                 $config['db_password'],
                 $config['db_database'],
-                $config['db_port']
+                (int)$config['db_port']
             );
-
-            if (!$success || $connection->connect_error) {
-                $this->io->error("Database connection failed: " . ($connection->connect_error ?: 'Connection failed'));
-                return null;
-            }
-
-            return $connection;
         } catch (\Exception $e) {
-            $this->io->error("Database connection exception: " . $e->getMessage());
-            $this->io->error("Error details: " . $e->getFile() . ":" . $e->getLine());
+            $this->io->error('Database connection exception: ' . $e->getMessage());
             return null;
         }
+
+        return $this->dbConnection;
     }
 
 
@@ -269,7 +298,7 @@ abstract class Command extends BaseCommand
      *
      * @param string $sql
      * @param array $params
-     * @return \mysqli_result|bool|null
+     * @return mixed
      */
     protected function query($sql, $params = [])
     {
@@ -279,24 +308,39 @@ abstract class Command extends BaseCommand
         }
 
         if (!empty($params)) {
-            $stmt = $connection->prepare($sql);
-            if ($stmt) {
-                $types = str_repeat('s', count($params));
-                $stmt->bind_param($types, ...$params);
-                $stmt->execute();
-                $result = $stmt->get_result();
-                $stmt->close();
-                $connection->close();
-                return $result;
-            }
-        } else {
-            $result = $connection->query($sql);
-            $connection->close();
-            return $result;
+            $sql = $this->buildParameterizedSql($connection, $sql, $params);
         }
 
-        $connection->close();
-        return null;
+        return $connection->query($sql);
+    }
+
+    /**
+     * Replace parameter placeholders with escaped values
+     *
+     * @param \DB $connection
+     * @param string $sql
+     * @param array $params
+     * @return string
+     */
+    protected function buildParameterizedSql($connection, $sql, array $params)
+    {
+        foreach ($params as $param) {
+            $replacement = 'NULL';
+
+            if ($param !== null) {
+                if (is_int($param) || is_float($param)) {
+                    $replacement = (string)$param;
+                } elseif (is_bool($param)) {
+                    $replacement = $param ? '1' : '0';
+                } else {
+                    $replacement = "'" . $connection->escape((string)$param) . "'";
+                }
+            }
+
+            $sql = preg_replace('/\?/', $replacement, $sql, 1);
+        }
+
+        return $sql;
     }
 
     /**

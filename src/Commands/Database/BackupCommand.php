@@ -63,8 +63,8 @@ class BackupCommand extends Command
             return 1;
         }
 
-        $connection = $this->getDatabaseConnection();
-        if (!$connection) {
+        $db = $this->getDatabaseConnection();
+        if (!$db) {
             $this->io->error('Could not connect to database.');
             return 1;
         }
@@ -98,10 +98,9 @@ class BackupCommand extends Command
         $this->io->text("Output: {$fullPath}");
 
         // Get tables to backup
-        $tables = $this->getTablesToBackup($connection, $config);
+        $tables = $this->getTablesToBackup($db, $config);
         if (empty($tables)) {
             $this->io->error('No tables found to backup.');
-            $connection->close();
             return 1;
         }
 
@@ -109,19 +108,17 @@ class BackupCommand extends Command
 
         // Create backup
         try {
-            $this->createBackup($connection, $config, $tables, $fullPath, $compress);
+            $this->createBackup($db, $config, $tables, $fullPath, $compress);
             $this->io->success("Backup created successfully: {$fullPath}");
         } catch (\Exception $e) {
             $this->io->error("Backup failed: " . $e->getMessage());
-            $connection->close();
             return 1;
         }
 
-        $connection->close();
         return 0;
     }
 
-    private function getTablesToBackup($connection, $config)
+    private function getTablesToBackup($db, $config)
     {
         $specificTables = $this->input->getOption('tables');
 
@@ -131,17 +128,20 @@ class BackupCommand extends Command
 
         // Get all tables with the OpenCart prefix
         $prefix = $config['db_prefix'];
-        $result = $connection->query("SHOW TABLES LIKE '{$prefix}%'");
+        $result = $db->query("SHOW TABLES LIKE '" . $db->escape($prefix) . "%'");
 
         $tables = [];
-        while ($row = $result->fetch_array()) {
-            $tables[] = $row[0];
+        if ($result && !empty($result->rows)) {
+            foreach ($result->rows as $row) {
+                // SHOW TABLES result uses the table name as the first value
+                $tables[] = array_values($row)[0];
+            }
         }
 
         return $tables;
     }
 
-    private function createBackup($connection, $config, $tables, $filePath, $compress)
+    private function createBackup($db, $config, $tables, $filePath, $compress)
     {
         // Open file handle
         $handle = $compress ? gzopen($filePath, 'w') : fopen($filePath, 'w');
@@ -165,25 +165,26 @@ class BackupCommand extends Command
             $this->io->text("Backing up table: {$table}");
 
             // Get table structure
-            $createResult = $connection->query("SHOW CREATE TABLE `{$table}`");
-            if ($createResult && $createRow = $createResult->fetch_array()) {
+            $createResult = $db->query("SHOW CREATE TABLE `{$table}`");
+            if ($createResult && !empty($createResult->row)) {
                 $writeFunc($handle, "-- Table structure for {$table}\n");
                 $writeFunc($handle, "DROP TABLE IF EXISTS `{$table}`;\n");
+                $createRow = array_values($createResult->row);
                 $writeFunc($handle, $createRow[1] . ";\n\n");
             }
 
             // Get table data
-            $dataResult = $connection->query("SELECT * FROM `{$table}`");
+            $dataResult = $db->query("SELECT * FROM `{$table}`");
             if ($dataResult && $dataResult->num_rows > 0) {
                 $writeFunc($handle, "-- Data for table {$table}\n");
 
-                while ($row = $dataResult->fetch_assoc()) {
+                foreach ($dataResult->rows as $row) {
                     $values = [];
                     foreach ($row as $value) {
                         if ($value === null) {
                             $values[] = 'NULL';
                         } else {
-                            $values[] = "'" . $connection->real_escape_string($value) . "'";
+                            $values[] = "'" . $db->escape((string)$value) . "'";
                         }
                     }
 

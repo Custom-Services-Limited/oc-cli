@@ -65,8 +65,8 @@ class ListCommand extends Command
             return 1;
         }
 
-        $connection = $this->getDatabaseConnection();
-        if (!$connection) {
+        $db = $this->getDatabaseConnection();
+        if (!$db) {
             $this->io->error('Could not connect to database.');
             return 1;
         }
@@ -76,20 +76,18 @@ class ListCommand extends Command
         $limit = (int)$this->input->getOption('limit');
         $search = $this->input->getOption('search');
 
-        $products = $this->getProducts($connection, $category, $status, $limit, $search);
+        $products = $this->getProducts($db, $category, $status, $limit, $search);
 
         if (empty($products)) {
             $this->io->warning('No products found matching the criteria.');
-            $connection->close();
             return 0;
         }
 
         $this->displayProducts($products);
-        $connection->close();
         return 0;
     }
 
-    private function getProducts($connection, $category = null, $status = 'all', $limit = 50, $search = null)
+    private function getProducts($db, $category = null, $status = 'all', $limit = 50, $search = null)
     {
         $config = $this->getOpenCartConfig();
         $prefix = $config['db_prefix'];
@@ -111,59 +109,41 @@ class ListCommand extends Command
             WHERE 1=1
         ";
 
-        $params = [];
-        $types = '';
+        $conditions = [];
 
         if ($status !== 'all') {
             $statusValue = ($status === 'enabled') ? 1 : 0;
-            $sql .= " AND p.status = ?";
-            $params[] = $statusValue;
-            $types .= 'i';
+            $conditions[] = 'p.status = ' . (int)$statusValue;
         }
 
         if ($category) {
             if (is_numeric($category)) {
-                $sql .= " AND ptc.category_id = ?";
-                $params[] = (int)$category;
-                $types .= 'i';
+                $conditions[] = 'ptc.category_id = ' . (int)$category;
             } else {
-                $sql .= " AND cd.name LIKE ?";
-                $params[] = '%' . $category . '%';
-                $types .= 's';
+                $conditions[] = "cd.name LIKE '" . $db->escape('%' . $category . '%') . "'";
             }
         }
 
         if ($search) {
-            $sql .= " AND (pd.name LIKE ? OR p.model LIKE ?)";
-            $params[] = '%' . $search . '%';
-            $params[] = '%' . $search . '%';
-            $types .= 'ss';
+            $searchEscaped = $db->escape('%' . $search . '%');
+            $conditions[] = "(pd.name LIKE '{$searchEscaped}' OR p.model LIKE '{$searchEscaped}')";
+        }
+
+        if (!empty($conditions)) {
+            $sql .= ' AND ' . implode(' AND ', $conditions);
         }
 
         $sql .= " ORDER BY p.product_id DESC";
 
         if ($limit > 0) {
-            $sql .= " LIMIT ?";
-            $params[] = $limit;
-            $types .= 'i';
+            $sql .= ' LIMIT ' . (int)$limit;
         }
 
         $products = [];
-        if (!empty($params)) {
-            $stmt = $connection->prepare($sql);
-            if ($stmt) {
-                $stmt->bind_param($types, ...$params);
-                $stmt->execute();
-                $result = $stmt->get_result();
-            } else {
-                return [];
-            }
-        } else {
-            $result = $connection->query($sql);
-        }
+        $result = $db->query($sql);
 
-        if ($result) {
-            while ($row = $result->fetch_assoc()) {
+        if ($result && !empty($result->rows)) {
+            foreach ($result->rows as $row) {
                 $products[] = [
                     'product_id' => $row['product_id'],
                     'name' => $row['name'] ?: 'N/A',

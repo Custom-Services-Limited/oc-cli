@@ -168,8 +168,8 @@ class ConfigCommand extends Command
             return 1;
         }
 
-        $connection = $this->getDatabaseConnection();
-        if (!$connection) {
+        $db = $this->getDatabaseConnection();
+        if (!$db) {
             $this->io->error('Failed to connect to database');
             return 1;
         }
@@ -181,29 +181,37 @@ class ConfigCommand extends Command
         $group = $isAdmin ? 'config' : 'config';
         $store_id = 0;
 
-        $query = "UPDATE `{$table}` SET `value` = ? WHERE `code` = ? AND `key` = ? AND `store_id` = ?";
-        $result = $this->query($query, [$value, $group, $key, $store_id]);
+        $valueEscaped = $db->escape((string)$value);
+        $groupEscaped = $db->escape((string)$group);
+        $keyEscaped = $db->escape((string)$key);
+        $storeId = (int)$store_id;
 
-        if ($result === null) {
-            $checkQuery = "SELECT COUNT(*) as count FROM `{$table}` WHERE `code` = ? AND `key` = ? AND `store_id` = ?";
-            $checkResult = $this->query($checkQuery, [$group, $key, $store_id]);
+        $db->query(
+            "UPDATE `{$table}` SET `value` = '{$valueEscaped}' " .
+            "WHERE `code` = '{$groupEscaped}' AND `key` = '{$keyEscaped}' AND `store_id` = {$storeId}"
+        );
 
-            if ($checkResult && $checkResult->fetch_assoc()['count'] == 0) {
-                $insertQuery = "INSERT INTO `{$table}` (`store_id`, `code`, `key`, `value`, `serialized`) " .
-                              "VALUES (?, ?, ?, ?, 0)";
-                $insertResult = $this->query($insertQuery, [$store_id, $group, $key, $value]);
-
-                if ($insertResult) {
-                    $this->io->success("Configuration '{$key}' set to '{$value}'");
-                    return 0;
-                }
-            }
-
-            $this->io->error("Failed to set configuration '{$key}'");
-            return 1;
+        if ($db->countAffected() > 0) {
+            $this->io->success("Configuration '{$key}' updated to '{$value}'");
+            return 0;
         }
 
-        $this->io->success("Configuration '{$key}' updated to '{$value}'");
+        $checkResult = $db->query(
+            "SELECT COUNT(*) AS count FROM `{$table}` " .
+            "WHERE `code` = '{$groupEscaped}' AND `key` = '{$keyEscaped}' AND `store_id` = {$storeId}"
+        );
+
+        if ((int)$checkResult->row['count'] === 0) {
+            $db->query(
+                "INSERT INTO `{$table}` (`store_id`, `code`, `key`, `value`, `serialized`) " .
+                "VALUES ({$storeId}, '{$groupEscaped}', '{$keyEscaped}', '{$valueEscaped}', 0)"
+            );
+
+            $this->io->success("Configuration '{$key}' set to '{$value}'");
+            return 0;
+        }
+
+        $this->io->success("Configuration '{$key}' already set to '{$value}'");
         return 0;
     }
 
@@ -247,8 +255,8 @@ class ConfigCommand extends Command
      */
     protected function getConfigFromDatabase($isAdmin)
     {
-        $connection = $this->getDatabaseConnection();
-        if (!$connection) {
+        $db = $this->getDatabaseConnection();
+        if (!$db) {
             return null;
         }
 
@@ -258,16 +266,15 @@ class ConfigCommand extends Command
 
         $store_id = 0;
 
-        $query = "SELECT `key`, `value` FROM `{$table}` WHERE `store_id` = ? ORDER BY `key`";
-        $result = $this->query($query, [$store_id]);
-
-        if (!$result) {
-            return null;
-        }
-
         $settings = [];
-        while ($row = $result->fetch_assoc()) {
-            $settings[$row['key']] = $row['value'];
+        $result = $db->query(
+            "SELECT `key`, `value` FROM `{$table}` WHERE `store_id` = {$store_id} ORDER BY `key`"
+        );
+
+        if ($result && !empty($result->rows)) {
+            foreach ($result->rows as $row) {
+                $settings[$row['key']] = $row['value'];
+            }
         }
 
         return $settings;

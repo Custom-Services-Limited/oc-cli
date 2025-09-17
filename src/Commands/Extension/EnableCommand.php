@@ -37,8 +37,8 @@ class EnableCommand extends Command
             return 1;
         }
 
-        $connection = $this->getDatabaseConnection();
-        if (!$connection) {
+        $db = $this->getDatabaseConnection();
+        if (!$db) {
             $this->io->error('Could not connect to database.');
             return 1;
         }
@@ -46,17 +46,15 @@ class EnableCommand extends Command
         $extensionIdentifier = $this->input->getArgument('extension');
 
         // Find the extension
-        $extension = $this->findExtension($connection, $extensionIdentifier);
+        $extension = $this->findExtension($db, $extensionIdentifier);
         if (!$extension) {
             $this->io->error("Extension '{$extensionIdentifier}' not found.");
-            $connection->close();
             return 1;
         }
 
         // Check if already enabled
-        if ($this->isExtensionEnabled($connection, $extension)) {
+        if ($this->isExtensionEnabled($db, $extension)) {
             $this->io->warning("Extension '{$extension['name']}' is already enabled.");
-            $connection->close();
             return 0;
         }
 
@@ -64,24 +62,21 @@ class EnableCommand extends Command
         $this->io->text("Extension: {$extension['name']} ({$extension['code']})");
 
         try {
-            if ($this->enableExtension($connection, $extension)) {
+            if ($this->enableExtension($db, $extension)) {
                 $this->io->success("Extension '{$extension['name']}' enabled successfully.");
             } else {
                 $this->io->error("Failed to enable extension '{$extension['name']}'.");
-                $connection->close();
                 return 1;
             }
         } catch (\Exception $e) {
             $this->io->error("Enable failed: " . $e->getMessage());
-            $connection->close();
             return 1;
         }
 
-        $connection->close();
         return 0;
     }
 
-    private function findExtension($connection, $identifier)
+    private function findExtension($db, $identifier)
     {
         $config = $this->getOpenCartConfig();
         $prefix = $config['db_prefix'];
@@ -96,19 +91,16 @@ class EnableCommand extends Command
                 ei.version,
                 ei.author
             FROM {$prefix}extension_install ei
-            WHERE ei.code = ? OR ei.name = ?
+            WHERE ei.code = '" . $db->escape($identifier) . "' OR ei.name = '" . $db->escape($identifier) . "'
             LIMIT 1
         ";
 
-        $stmt = $connection->prepare($sql);
-        $stmt->bind_param('ss', $identifier, $identifier);
-        $stmt->execute();
-        $result = $stmt->get_result();
+        $result = $db->query($sql);
 
-        return $result->fetch_assoc();
+        return $result && $result->num_rows ? $result->row : null;
     }
 
-    private function isExtensionEnabled($connection, $extension)
+    private function isExtensionEnabled($db, $extension)
     {
         $config = $this->getOpenCartConfig();
         $prefix = $config['db_prefix'];
@@ -116,18 +108,15 @@ class EnableCommand extends Command
         $sql = "
             SELECT extension_id 
             FROM {$prefix}extension 
-            WHERE extension_install_id = ? AND code = ?
+            WHERE extension_install_id = " . (int)$extension['extension_install_id'] . " AND code = '" . $db->escape($extension['code']) . "'
         ";
 
-        $stmt = $connection->prepare($sql);
-        $stmt->bind_param('is', $extension['extension_install_id'], $extension['code']);
-        $stmt->execute();
-        $result = $stmt->get_result();
+        $result = $db->query($sql);
 
-        return $result->fetch_assoc() !== null;
+        return $result && $result->num_rows > 0;
     }
 
-    private function enableExtension($connection, $extension)
+    private function enableExtension($db, $extension)
     {
         $config = $this->getOpenCartConfig();
         $prefix = $config['db_prefix'];
@@ -135,17 +124,15 @@ class EnableCommand extends Command
         // Insert into extension table to enable
         $sql = "
             INSERT INTO {$prefix}extension (extension_install_id, type, code) 
-            VALUES (?, ?, ?)
+            VALUES (
+                " . (int)$extension['extension_install_id'] . ",
+                '" . $db->escape($extension['type']) . "',
+                '" . $db->escape($extension['code']) . "'
+            )
         ";
 
-        $stmt = $connection->prepare($sql);
-        $stmt->bind_param(
-            'iss',
-            $extension['extension_install_id'],
-            $extension['type'],
-            $extension['code']
-        );
+        $db->query($sql);
 
-        return $stmt->execute();
+        return $db->countAffected() > 0;
     }
 }

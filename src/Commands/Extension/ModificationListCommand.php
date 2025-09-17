@@ -39,26 +39,24 @@ class ModificationListCommand extends Command
             return 1;
         }
 
-        $connection = $this->getDatabaseConnection();
-        if (!$connection) {
+        $db = $this->getDatabaseConnection();
+        if (!$db) {
             $this->io->error('Could not connect to database.');
             return 1;
         }
 
-        $modifications = $this->getModifications($connection);
+        $modifications = $this->getModifications($db);
 
         if (empty($modifications)) {
             $this->io->warning('No modifications found.');
-            $connection->close();
             return 0;
         }
 
         $this->displayModifications($modifications);
-        $connection->close();
         return 0;
     }
 
-    private function getModifications($connection)
+    private function getModifications($db)
     {
         $config = $this->getOpenCartConfig();
         $prefix = $config['db_prefix'];
@@ -77,11 +75,11 @@ class ModificationListCommand extends Command
             ORDER BY name ASC
         ";
 
-        $result = $connection->query($sql);
+        $result = $db->query($sql);
 
         $modifications = [];
-        if ($result) {
-            while ($row = $result->fetch_assoc()) {
+        if ($result && !empty($result->rows)) {
+            foreach ($result->rows as $row) {
                 $modifications[] = [
                     'id' => $row['modification_id'],
                     'name' => $row['name'],

@@ -37,8 +37,8 @@ class DisableCommand extends Command
             return 1;
         }
 
-        $connection = $this->getDatabaseConnection();
-        if (!$connection) {
+        $db = $this->getDatabaseConnection();
+        if (!$db) {
             $this->io->error('Could not connect to database.');
             return 1;
         }
@@ -46,17 +46,15 @@ class DisableCommand extends Command
         $extensionIdentifier = $this->input->getArgument('extension');
 
         // Find the extension
-        $extension = $this->findExtension($connection, $extensionIdentifier);
+        $extension = $this->findExtension($db, $extensionIdentifier);
         if (!$extension) {
             $this->io->error("Extension '{$extensionIdentifier}' not found.");
-            $connection->close();
             return 1;
         }
 
         // Check if already disabled
-        if (!$this->isExtensionEnabled($connection, $extension)) {
+        if (!$this->isExtensionEnabled($db, $extension)) {
             $this->io->warning("Extension '{$extension['name']}' is already disabled.");
-            $connection->close();
             return 0;
         }
 
@@ -64,24 +62,21 @@ class DisableCommand extends Command
         $this->io->text("Extension: {$extension['name']} ({$extension['code']})");
 
         try {
-            if ($this->disableExtension($connection, $extension)) {
+            if ($this->disableExtension($db, $extension)) {
                 $this->io->success("Extension '{$extension['name']}' disabled successfully.");
             } else {
                 $this->io->error("Failed to disable extension '{$extension['name']}'.");
-                $connection->close();
                 return 1;
             }
         } catch (\Exception $e) {
             $this->io->error("Disable failed: " . $e->getMessage());
-            $connection->close();
             return 1;
         }
 
-        $connection->close();
         return 0;
     }
 
-    private function findExtension($connection, $identifier)
+    private function findExtension($db, $identifier)
     {
         $config = $this->getOpenCartConfig();
         $prefix = $config['db_prefix'];
@@ -96,19 +91,16 @@ class DisableCommand extends Command
                 ei.version,
                 ei.author
             FROM {$prefix}extension_install ei
-            WHERE ei.code = ? OR ei.name = ?
+            WHERE ei.code = '" . $db->escape($identifier) . "' OR ei.name = '" . $db->escape($identifier) . "'
             LIMIT 1
         ";
 
-        $stmt = $connection->prepare($sql);
-        $stmt->bind_param('ss', $identifier, $identifier);
-        $stmt->execute();
-        $result = $stmt->get_result();
+        $result = $db->query($sql);
 
-        return $result->fetch_assoc();
+        return $result && $result->num_rows ? $result->row : null;
     }
 
-    private function isExtensionEnabled($connection, $extension)
+    private function isExtensionEnabled($db, $extension)
     {
         $config = $this->getOpenCartConfig();
         $prefix = $config['db_prefix'];
@@ -116,18 +108,15 @@ class DisableCommand extends Command
         $sql = "
             SELECT extension_id 
             FROM {$prefix}extension 
-            WHERE extension_install_id = ? AND code = ?
+            WHERE extension_install_id = " . (int)$extension['extension_install_id'] . " AND code = '" . $db->escape($extension['code']) . "'
         ";
 
-        $stmt = $connection->prepare($sql);
-        $stmt->bind_param('is', $extension['extension_install_id'], $extension['code']);
-        $stmt->execute();
-        $result = $stmt->get_result();
+        $result = $db->query($sql);
 
-        return $result->fetch_assoc() !== null;
+        return $result && $result->num_rows > 0;
     }
 
-    private function disableExtension($connection, $extension)
+    private function disableExtension($db, $extension)
     {
         $config = $this->getOpenCartConfig();
         $prefix = $config['db_prefix'];
@@ -135,16 +124,11 @@ class DisableCommand extends Command
         // Remove from extension table to disable
         $sql = "
             DELETE FROM {$prefix}extension 
-            WHERE extension_install_id = ? AND code = ?
+            WHERE extension_install_id = " . (int)$extension['extension_install_id'] . " AND code = '" . $db->escape($extension['code']) . "'
         ";
 
-        $stmt = $connection->prepare($sql);
-        $stmt->bind_param(
-            'is',
-            $extension['extension_install_id'],
-            $extension['code']
-        );
+        $db->query($sql);
 
-        return $stmt->execute();
+        return $db->countAffected() > 0;
     }
 }
