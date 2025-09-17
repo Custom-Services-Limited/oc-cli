@@ -56,6 +56,9 @@
         "cs-check": "./vendor/bin/phpcs --standard=PSR12 src/ tests/",
         "cs-fix": "./vendor/bin/phpcbf --standard=PSR12 src/ tests/",
         "analyze": "./vendor/bin/phpstan analyse src/",
+        "build:phar": [
+            "@php -d phar.readonly=0 box.phar compile --config=box.json"
+        ],
         "ready-for-deploy": [
             "./vendor/bin/phpunit",
             "./vendor/bin/phpcbf --standard=PSR12 src/ tests/",
