@@ -306,7 +306,10 @@ class ConfigCommand extends Command
         $this->io->note('Total: ' . count($config) . ' configuration entries');
 
         if ($this->openCartRoot) {
-            $this->io->note('OpenCart root: ' . $this->openCartRoot);
+            $this->io->newLine();
+            $this->io->writeln(
+                sprintf('<comment>OpenCart root:</comment> %s', $this->openCartRoot)
+            );
         }
     }
 }

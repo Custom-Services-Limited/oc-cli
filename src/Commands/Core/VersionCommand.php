@@ -176,7 +176,10 @@ class VersionCommand extends Command
         $this->io->table(['Component', 'Version'], $rows);
 
         if ($this->openCartRoot) {
-            $this->io->note('OpenCart root: ' . $this->openCartRoot);
+            $this->io->newLine();
+            $this->io->writeln(
+                sprintf('<comment>OpenCart root:</comment> %s', $this->openCartRoot)
+            );
         } else {
             $this->io->warning('No OpenCart installation detected in current directory or parent directories.');
         }
