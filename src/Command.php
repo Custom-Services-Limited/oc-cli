@@ -41,7 +41,7 @@ abstract class Command extends BaseCommand
     protected $openCartRoot;
 
     /**
-     * @var \DB|null
+     * @var object|null
      */
     protected $dbConnection;
 
@@ -144,7 +144,7 @@ abstract class Command extends BaseCommand
     protected function requireOpenCart($require = true)
     {
         // If database connection parameters are provided, we don't need OpenCart root
-        if ($this->input && $this->input->hasOption('db-host') && $this->input->getOption('db-host')) {
+        if ($this->usingCliDatabaseOptions()) {
             return true;
         }
 
@@ -241,7 +241,7 @@ abstract class Command extends BaseCommand
      */
     protected function getDatabaseConnection()
     {
-        if ($this->dbConnection instanceof \DB) {
+        if ($this->dbConnection) {
             return $this->dbConnection;
         }
 
@@ -252,44 +252,60 @@ abstract class Command extends BaseCommand
 
         $systemDir = isset($config['dir_system']) ? rtrim($config['dir_system'], '/\\') . '/' : null;
 
-        if (!$systemDir || !is_dir($systemDir)) {
-            if ($this->openCartRoot) {
-                $systemDir = rtrim($this->openCartRoot, '/\\') . '/system/';
+        if ($systemDir && is_dir($systemDir) && file_exists($systemDir . 'library/db.php')) {
+            if (!defined('DIR_SYSTEM')) {
+                if ($systemDir) {
+                    define('DIR_SYSTEM', $systemDir);
+                }
             }
+
+            if (!defined('DIR_SYSTEM')) {
+                $this->io->error('DIR_SYSTEM constant is not defined. Unable to bootstrap OpenCart database layer.');
+                return null;
+            }
+
+            require_once $systemDir . 'library/db.php';
+
+            $driver = $config['db_driver'] ?: 'mysqli';
+            $driverFile = $systemDir . 'library/db/' . $driver . '.php';
+
+            if (!file_exists($driverFile)) {
+                $this->io->error("OpenCart database driver not found: {$driverFile}");
+                return null;
+            }
+
+            require_once $driverFile;
+
+            try {
+                $this->dbConnection = new \DB(
+                    $driver,
+                    $config['db_hostname'],
+                    $config['db_username'],
+                    $config['db_password'],
+                    $config['db_database'],
+                    (int)$config['db_port']
+                );
+            } catch (\Exception $e) {
+                $this->io->error('Database connection exception: ' . $e->getMessage());
+                return null;
+            }
+
+            return $this->dbConnection;
         }
 
-        if (!$systemDir || !file_exists($systemDir . 'library/db.php')) {
-            $this->io->error('Unable to locate OpenCart database library (system/library/db.php).');
-            return null;
+        if ($this->usingCliDatabaseOptions()) {
+            try {
+                $this->dbConnection = new LegacyDbAdapter($config);
+            } catch (\Exception $e) {
+                $this->io->error('Database connection failed: ' . $e->getMessage());
+                return null;
+            }
+
+            return $this->dbConnection;
         }
 
-        require_once $systemDir . 'library/db.php';
-
-        $driver = $config['db_driver'] ?: 'mysqli';
-        $driverFile = $systemDir . 'library/db/' . $driver . '.php';
-
-        if (!file_exists($driverFile)) {
-            $this->io->error("OpenCart database driver not found: {$driverFile}");
-            return null;
-        }
-
-        require_once $driverFile;
-
-        try {
-            $this->dbConnection = new \DB(
-                $driver,
-                $config['db_hostname'],
-                $config['db_username'],
-                $config['db_password'],
-                $config['db_database'],
-                (int)$config['db_port']
-            );
-        } catch (\Exception $e) {
-            $this->io->error('Database connection exception: ' . $e->getMessage());
-            return null;
-        }
-
-        return $this->dbConnection;
+        $this->io->error('Unable to locate OpenCart database library (system/library/db.php).');
+        return null;
     }
 
 
@@ -317,7 +333,7 @@ abstract class Command extends BaseCommand
     /**
      * Replace parameter placeholders with escaped values
      *
-     * @param \DB $connection
+     * @param object $connection
      * @param string $sql
      * @param array $params
      * @return string
@@ -344,6 +360,18 @@ abstract class Command extends BaseCommand
     }
 
     /**
+     * Check whether CLI database connection options are present
+     *
+     * @return bool
+     */
+    protected function usingCliDatabaseOptions(): bool
+    {
+        return $this->input
+            && $this->input->hasOption('db-host')
+            && $this->input->getOption('db-host');
+    }
+
+    /**
      * Format bytes to human readable format
      *
      * @param int $bytes
@@ -359,5 +387,131 @@ abstract class Command extends BaseCommand
         }
 
         return round($bytes, $precision) . ' ' . $units[$i];
+    }
+}
+
+class LegacyDbAdapter
+{
+    /**
+     * @var \mysqli
+     */
+    private $connection;
+
+    /**
+     * @var int
+     */
+    private $affectedRows = 0;
+
+    /**
+     * LegacyDbAdapter constructor.
+     *
+     * @param array $config
+     * @throws \Exception
+     */
+    public function __construct(array $config)
+    {
+        $connection = \mysqli_init();
+        if (!$connection) {
+            throw new \Exception('Unable to initialise mysqli.');
+        }
+
+        ini_set('default_socket_timeout', '2');
+
+        $connection->options(MYSQLI_OPT_CONNECT_TIMEOUT, 2);
+        if (defined('MYSQLI_OPT_READ_TIMEOUT')) {
+            $connection->options(MYSQLI_OPT_READ_TIMEOUT, 2);
+        }
+
+        $hostname = $config['db_hostname'] === 'localhost' ? '127.0.0.1' : $config['db_hostname'];
+
+        if (!$connection->real_connect(
+            $hostname,
+            $config['db_username'],
+            $config['db_password'],
+            $config['db_database'],
+            (int)$config['db_port']
+        )) {
+            throw new \Exception($connection->connect_error ?: 'Connection failed');
+        }
+
+        $this->connection = $connection;
+    }
+
+    /**
+     * Execute a query and return an OpenCart-style result object
+     *
+     * @param string $sql
+     * @return object
+     * @throws \Exception
+     */
+    public function query($sql)
+    {
+        $result = $this->connection->query($sql);
+
+        if ($result instanceof \mysqli_result) {
+            $data = [];
+            while ($row = $result->fetch_assoc()) {
+                $data[] = $row;
+            }
+            $result->free();
+
+            $this->affectedRows = $this->connection->affected_rows;
+
+            return (object) [
+                'row' => $data ? $data[0] : [],
+                'rows' => $data,
+                'num_rows' => count($data),
+            ];
+        }
+
+        if ($result === true) {
+            $this->affectedRows = $this->connection->affected_rows;
+
+            return (object) [
+                'row' => [],
+                'rows' => [],
+                'num_rows' => 0,
+            ];
+        }
+
+        throw new \Exception($this->connection->error ?: 'Unknown database error');
+    }
+
+    /**
+     * Escape a string value
+     *
+     * @param string $value
+     * @return string
+     */
+    public function escape($value)
+    {
+        return $this->connection->real_escape_string($value);
+    }
+
+    /**
+     * Get number of affected rows
+     *
+     * @return int
+     */
+    public function countAffected()
+    {
+        return $this->affectedRows;
+    }
+
+    /**
+     * Get last insert ID
+     *
+     * @return int
+     */
+    public function getLastId()
+    {
+        return $this->connection->insert_id;
+    }
+
+    public function __destruct()
+    {
+        if ($this->connection instanceof \mysqli) {
+            $this->connection->close();
+        }
     }
 }
