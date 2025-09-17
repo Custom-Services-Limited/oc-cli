@@ -15,7 +15,7 @@ Thumbs.db
 
 # Build artifacts
 /build/
-*.phar
+oc-cli.phar
 
 # Test artifacts
 /coverage/
