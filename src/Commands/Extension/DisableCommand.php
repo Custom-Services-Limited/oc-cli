@@ -105,10 +105,13 @@ class DisableCommand extends Command
         $config = $this->getOpenCartConfig();
         $prefix = $config['db_prefix'];
 
+        $extensionInstallId = (int)$extension['extension_install_id'];
+        $extensionCode = $db->escape($extension['code']);
+
         $sql = "
             SELECT extension_id 
             FROM {$prefix}extension 
-            WHERE extension_install_id = " . (int)$extension['extension_install_id'] . " AND code = '" . $db->escape($extension['code']) . "'
+            WHERE extension_install_id = {$extensionInstallId} AND code = '{$extensionCode}'
         ";
 
         $result = $db->query($sql);
@@ -122,9 +125,12 @@ class DisableCommand extends Command
         $prefix = $config['db_prefix'];
 
         // Remove from extension table to disable
+        $extensionInstallId = (int)$extension['extension_install_id'];
+        $extensionCode = $db->escape($extension['code']);
+
         $sql = "
             DELETE FROM {$prefix}extension 
-            WHERE extension_install_id = " . (int)$extension['extension_install_id'] . " AND code = '" . $db->escape($extension['code']) . "'
+            WHERE extension_install_id = {$extensionInstallId} AND code = '{$extensionCode}'
         ";
 
         $db->query($sql);

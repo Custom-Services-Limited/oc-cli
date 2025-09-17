@@ -262,13 +262,51 @@ class CreateCommand extends Command
             $statusInt = (int)$status;
             $weight = (float)$data['weight'];
 
-            $db->query(
-                "INSERT INTO {$prefix}product (" .
-                "model, sku, upc, ean, jan, isbn, mpn, location, " .
-                "price, quantity, status, weight, manufacturer_id, " .
-                "stock_status_id, shipping, tax_class_id, date_available, date_added, date_modified" .
-                ") VALUES ('{$model}', '{$sku}', '', '', '', '', '', '', {$price}, {$quantity}, {$statusInt}, {$weight}, 0, 7, 1, 0, CURDATE(), NOW(), NOW())"
-            );
+            $productInsert = <<<SQL
+INSERT INTO {$prefix}product (
+    model,
+    sku,
+    upc,
+    ean,
+    jan,
+    isbn,
+    mpn,
+    location,
+    price,
+    quantity,
+    status,
+    weight,
+    manufacturer_id,
+    stock_status_id,
+    shipping,
+    tax_class_id,
+    date_available,
+    date_added,
+    date_modified
+) VALUES (
+    '{$model}',
+    '{$sku}',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    {$price},
+    {$quantity},
+    {$statusInt},
+    {$weight},
+    0,
+    7,
+    1,
+    0,
+    CURDATE(),
+    NOW(),
+    NOW()
+)
+SQL;
+
+            $db->query($productInsert);
 
             $productId = $db->getLastId();
 
@@ -277,11 +315,29 @@ class CreateCommand extends Command
             $description = $db->escape($data['description']);
             $productIdInt = (int)$productId;
 
-            $db->query(
-                "INSERT INTO {$prefix}product_description (" .
-                "product_id, language_id, name, description, tag, meta_title, meta_description, meta_keyword" .
-                ") VALUES ({$productIdInt}, 1, '{$name}', '{$description}', '', '{$name}', '', '')"
-            );
+            $productDescriptionInsert = <<<SQL
+INSERT INTO {$prefix}product_description (
+    product_id,
+    language_id,
+    name,
+    description,
+    tag,
+    meta_title,
+    meta_description,
+    meta_keyword
+) VALUES (
+    {$productIdInt},
+    1,
+    '{$name}',
+    '{$description}',
+    '',
+    '{$name}',
+    '',
+    ''
+)
+SQL;
+
+            $db->query($productDescriptionInsert);
 
             // Insert into oc_product_to_category if category is specified
             if (!empty($data['category'])) {

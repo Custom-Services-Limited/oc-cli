@@ -176,7 +176,8 @@ class InstallCommand extends Command
         $prefix = $config['db_prefix'];
 
         // Check if extension is already installed
-        $checkSql = "SELECT extension_install_id FROM {$prefix}extension_install WHERE code = '" . $db->escape($data['code']) . "'";
+        $extensionCode = $db->escape($data['code']);
+        $checkSql = "SELECT extension_install_id FROM {$prefix}extension_install WHERE code = '{$extensionCode}'";
         $result = $db->query($checkSql);
 
         if ($result && $result->num_rows) {
@@ -184,15 +185,36 @@ class InstallCommand extends Command
         }
 
         // Insert into extension_install table
-        $db->query(
-            "INSERT INTO {$prefix}extension_install (type, code, name, version, author, filename, date_added) VALUES (" .
-            "'" . $db->escape($data['type']) . "', " .
-            "'" . $db->escape($data['code']) . "', " .
-            "'" . $db->escape($data['name']) . "', " .
-            "'" . $db->escape($data['version']) . "', " .
-            "'" . $db->escape($data['author']) . "', " .
-            "'" . $db->escape($data['filename']) . "', NOW())"
-        );
+        $values = [
+            $db->escape($data['type']),
+            $extensionCode,
+            $db->escape($data['name']),
+            $db->escape($data['version']),
+            $db->escape($data['author']),
+            $db->escape($data['filename']),
+        ];
+
+        $insertSql = <<<SQL
+INSERT INTO {$prefix}extension_install (
+    type,
+    code,
+    name,
+    version,
+    author,
+    filename,
+    date_added
+) VALUES (
+    '{$values[0]}',
+    '{$values[1]}',
+    '{$values[2]}',
+    '{$values[3]}',
+    '{$values[4]}',
+    '{$values[5]}',
+    NOW()
+)
+SQL;
+
+        $db->query($insertSql);
 
         $installId = $db->getLastId();
 

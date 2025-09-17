@@ -105,10 +105,13 @@ class EnableCommand extends Command
         $config = $this->getOpenCartConfig();
         $prefix = $config['db_prefix'];
 
+        $extensionInstallId = (int)$extension['extension_install_id'];
+        $extensionCode = $db->escape($extension['code']);
+
         $sql = "
             SELECT extension_id 
             FROM {$prefix}extension 
-            WHERE extension_install_id = " . (int)$extension['extension_install_id'] . " AND code = '" . $db->escape($extension['code']) . "'
+            WHERE extension_install_id = {$extensionInstallId} AND code = '{$extensionCode}'
         ";
 
         $result = $db->query($sql);
@@ -122,12 +125,16 @@ class EnableCommand extends Command
         $prefix = $config['db_prefix'];
 
         // Insert into extension table to enable
+        $extensionInstallId = (int)$extension['extension_install_id'];
+        $extensionType = $db->escape($extension['type']);
+        $extensionCode = $db->escape($extension['code']);
+
         $sql = "
             INSERT INTO {$prefix}extension (extension_install_id, type, code) 
             VALUES (
-                " . (int)$extension['extension_install_id'] . ",
-                '" . $db->escape($extension['type']) . "',
-                '" . $db->escape($extension['code']) . "'
+                {$extensionInstallId},
+                '{$extensionType}',
+                '{$extensionCode}'
             )
         ";
 

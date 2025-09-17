@@ -233,7 +233,8 @@ class CheckRequirementsCommand extends Command
 
         if ($db) {
             $versionResult = $db->query('SELECT VERSION() AS version');
-            $versionString = $versionResult && isset($versionResult->row['version']) ? $versionResult->row['version'] : 'unknown';
+            $hasVersion = $versionResult && isset($versionResult->row['version']);
+            $versionString = $hasVersion ? $versionResult->row['version'] : 'unknown';
 
             $numericVersion = 0;
             if ($versionString !== 'unknown') {
