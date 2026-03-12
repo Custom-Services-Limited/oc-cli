@@ -37,6 +37,7 @@ class CoreCommandsTest extends TestCase
 
     public function testCoreVersionCommandIntegration()
     {
+        $version = Application::resolveVersion(true);
         $this->applicationTester->run(['command' => 'core:version']);
 
         $this->assertEquals(0, $this->applicationTester->getStatusCode());
@@ -44,7 +45,7 @@ class CoreCommandsTest extends TestCase
 
         $this->assertStringContainsString('Version Information', $output);
         $this->assertStringContainsString('Oc-cli', $output);
-        $this->assertStringContainsString('1.0.2', $output);
+        $this->assertStringContainsString($version, $output);
         $this->assertStringContainsString('Php', $output);
         $this->assertStringContainsString(PHP_VERSION, $output);
     }
@@ -61,6 +62,7 @@ class CoreCommandsTest extends TestCase
 
     public function testCoreVersionCommandWithJsonFormat()
     {
+        $version = Application::resolveVersion(true);
         $this->applicationTester->run([
             'command' => 'core:version',
             '--format' => 'json'
@@ -75,7 +77,7 @@ class CoreCommandsTest extends TestCase
         $this->assertArrayHasKey('php', $json);
         $this->assertArrayHasKey('os', $json);
         $this->assertArrayHasKey('opencart', $json);
-        $this->assertEquals('1.0.2', $json['oc-cli']);
+        $this->assertEquals($version, $json['oc-cli']);
     }
 
     public function testCoreCheckRequirementsCommandIntegration()

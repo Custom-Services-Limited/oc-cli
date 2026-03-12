@@ -20,10 +20,11 @@ class ApplicationTest extends TestCase
     public function testApplicationCanBeInstantiated()
     {
         $app = new Application();
+        $version = Application::resolveVersion(true);
 
         $this->assertInstanceOf(Application::class, $app);
         $this->assertEquals(Application::NAME, $app->getName());
-        $this->assertEquals(Application::VERSION, $app->getVersion());
+        $this->assertEquals($version, $app->getVersion());
     }
 
     public function testApplicationHasDefaultCommands()
@@ -82,9 +83,10 @@ class ApplicationTest extends TestCase
     {
         $app = new Application();
         $longVersion = $app->getLongVersion();
+        $version = Application::resolveVersion(true);
 
         $this->assertStringContainsString('OC-CLI', $longVersion);
-        $this->assertStringContainsString('1.0.2', $longVersion);
+        $this->assertStringContainsString($version, $longVersion);
     }
 
     /**

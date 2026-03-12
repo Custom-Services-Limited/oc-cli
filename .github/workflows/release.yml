@@ -1,0 +1,110 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    name: Auto Release
+    concurrency:
+      group: release-main
+      cancel-in-progress: false
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Verify push came from a merged pull request
+      id: pr_guard
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        RESPONSE="$(curl -fsSL \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+          "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls")"
+
+        PR_COUNT="$(printf '%s' "$RESPONSE" | php -r '$prs = json_decode(stream_get_contents(STDIN), true); echo is_array($prs) ? count($prs) : 0;')"
+
+        echo "associated_prs=$PR_COUNT"
+
+        if [ "$PR_COUNT" -gt 0 ]; then
+          echo "is_merged_pr=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "is_merged_pr=false" >> "$GITHUB_OUTPUT"
+          echo "Skipping release because ${GITHUB_SHA} is not associated with a merged pull request."
+        fi
+
+    - name: Setup PHP
+      if: steps.pr_guard.outputs.is_merged_pr == 'true'
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: mbstring, mysqli, zip, phar
+        coverage: none
+        tools: composer:v2
+
+    - name: Install dependencies
+      if: steps.pr_guard.outputs.is_merged_pr == 'true'
+      run: composer install --prefer-dist --no-progress --no-dev --optimize-autoloader
+
+    - name: Download Box
+      if: steps.pr_guard.outputs.is_merged_pr == 'true'
+      run: |
+        curl -fsSL https://github.com/box-project/box/releases/latest/download/box.phar -o box.phar
+        chmod +x box.phar
+
+    - name: Fetch tags
+      if: steps.pr_guard.outputs.is_merged_pr == 'true'
+      run: git fetch --force --tags
+
+    - name: Resolve next release version
+      id: version
+      if: steps.pr_guard.outputs.is_merged_pr == 'true'
+      run: echo "version=$(php scripts/next-release-version.php)" >> "$GITHUB_OUTPUT"
+
+    - name: Create release tag
+      if: steps.pr_guard.outputs.is_merged_pr == 'true'
+      env:
+        VERSION: ${{ steps.version.outputs.version }}
+      run: |
+        if git rev-parse -q --verify "refs/tags/v${VERSION}" >/dev/null; then
+          echo "Tag v${VERSION} already exists."
+        else
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "v${VERSION}" -m "Release v${VERSION}"
+          git push origin "v${VERSION}"
+        fi
+
+    - name: Build PHAR
+      if: steps.pr_guard.outputs.is_merged_pr == 'true'
+      env:
+        OC_CLI_VERSION: ${{ steps.version.outputs.version }}
+      run: composer build:phar
+
+    - name: Prepare release asset
+      if: steps.pr_guard.outputs.is_merged_pr == 'true'
+      run: cp oc-cli.phar "oc-cli-${{ steps.version.outputs.version }}.phar"
+
+    - name: Publish GitHub release
+      if: steps.pr_guard.outputs.is_merged_pr == 'true'
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: v${{ steps.version.outputs.version }}
+        target_commitish: ${{ github.sha }}
+        files: oc-cli-${{ steps.version.outputs.version }}.phar
+        generate_release_notes: true
+
+    - name: Release skipped
+      if: steps.pr_guard.outputs.is_merged_pr != 'true'
+      run: echo "Release intentionally skipped for non-PR push."

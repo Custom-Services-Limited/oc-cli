@@ -22,12 +22,12 @@ class ApplicationExtendedTest extends TestCase
     public function testGetLongVersionWithDifferentFormats()
     {
         $app = new Application();
-
+        $version = Application::resolveVersion(true);
         $longVersion = $app->getLongVersion();
 
         // Test that it contains the expected format with HTML tags
         $this->assertStringContainsString('<info>OC-CLI</info>', $longVersion);
-        $this->assertStringContainsString('<comment>1.0.2</comment>', $longVersion);
+        $this->assertStringContainsString('<comment>' . $version . '</comment>', $longVersion);
         $this->assertStringContainsString('version', $longVersion);
     }
 
@@ -177,11 +177,12 @@ class ApplicationExtendedTest extends TestCase
     public function testApplicationNameAndVersionConstants()
     {
         $app = new Application();
+        $version = Application::resolveVersion(true);
 
         $this->assertEquals('OC-CLI', $app->getName());
-        $this->assertEquals('1.0.2', $app->getVersion());
+        $this->assertEquals($version, $app->getVersion());
         $this->assertEquals('OC-CLI', Application::NAME);
-        $this->assertEquals('1.0.2', Application::VERSION);
+        $this->assertEquals('0.0.0-dev', Application::VERSION);
     }
 
     public function testGetDefaultCommandsIncludesVersionCommand()
