@@ -56,8 +56,9 @@ abstract class AbstractMaintenanceCommand extends Command
             return array_values(array_unique($resolved));
         }
 
-        $escapedPrefix = $db->escape($prefix) . '%';
-        $result = $db->query("SHOW TABLES LIKE '{$escapedPrefix}'");
+        $likePrefix = strtr($prefix, ['\\' => '\\\\', '%' => '\%', '_' => '\_']);
+        $escapedPrefix = $db->escape($likePrefix) . '%';
+        $result = $db->query("SHOW TABLES LIKE '{$escapedPrefix}' ESCAPE '\\\\'");
 
         if (!$result || empty($result->rows)) {
             return [];
