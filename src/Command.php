@@ -13,6 +13,7 @@
 namespace OpenCart\CLI;
 
 use OpenCart\CLI\Support\LegacyDbAdapter;
+use OpenCart\CLI\Support\OpenCartRuntime;
 use Symfony\Component\Console\Command\Command as BaseCommand;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -45,6 +46,11 @@ abstract class Command extends BaseCommand
      * @var object|null
      */
     protected $dbConnection;
+
+    /**
+     * @var array<string, OpenCartRuntime>
+     */
+    protected $runtimeCache = [];
 
     /**
      * Configure the command with global options
@@ -224,6 +230,37 @@ abstract class Command extends BaseCommand
         }
 
         return $config;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    protected function getOpenCartDefines(string $path): array
+    {
+        if (!file_exists($path)) {
+            return [];
+        }
+
+        $content = (string) file_get_contents($path);
+        preg_match_all(
+            '/define\s*\(\s*[\'"]([A-Z0-9_]+)[\'"]\s*,\s*(?:[\'"]([^\'"]*)[\'"]|([0-9]+)|\s*(true|false))\s*\)/i',
+            $content,
+            $matches,
+            PREG_SET_ORDER
+        );
+
+        $defines = [];
+        foreach ($matches as $match) {
+            if ($match[2] !== '') {
+                $defines[$match[1]] = $match[2];
+            } elseif ($match[3] !== '') {
+                $defines[$match[1]] = $match[3];
+            } else {
+                $defines[$match[1]] = strtolower($match[4]) === 'true' ? '1' : '';
+            }
+        }
+
+        return $defines;
     }
 
     /**
@@ -441,6 +478,71 @@ abstract class Command extends BaseCommand
         }
 
         return (bool) ($result && !empty($result->rows));
+    }
+
+    protected function requireOpenCartRootForRuntime(): bool
+    {
+        if (!$this->requireOpenCart()) {
+            return false;
+        }
+
+        if (!$this->openCartRoot) {
+            $this->io->error('This command requires a real OpenCart installation root. Database-only flags are not sufficient.');
+            return false;
+        }
+
+        if (!is_file($this->openCartRoot . '/config.php') || !is_file($this->openCartRoot . '/admin/config.php')) {
+            $this->io->error('OpenCart runtime commands require installed config.php and admin/config.php files.');
+            return false;
+        }
+
+        return true;
+    }
+
+    protected function requireOpenCartThreeRuntime(): bool
+    {
+        if (!$this->requireOpenCartRootForRuntime()) {
+            return false;
+        }
+
+        $version = (string) $this->getOpenCartVersion();
+        if ($version === '' || strpos($version, '3.') !== 0) {
+            $displayVersion = $version !== '' ? $version : 'unknown';
+            $this->io->error(
+                "This command is supported on OpenCart 3.x only. Resolved version: {$displayVersion}."
+            );
+            return false;
+        }
+
+        return true;
+    }
+
+    protected function getOpenCartRuntime(string $scope): OpenCartRuntime
+    {
+        if (!isset($this->runtimeCache[$scope])) {
+            if (!$this->openCartRoot) {
+                throw new \RuntimeException('OpenCart root is required for runtime access.');
+            }
+
+            $config = $this->getOpenCartConfig();
+            if (!$config) {
+                throw new \RuntimeException('Unable to resolve OpenCart configuration.');
+            }
+
+            $this->runtimeCache[$scope] = new OpenCartRuntime($this->openCartRoot, $scope, $config);
+        }
+
+        return $this->runtimeCache[$scope];
+    }
+
+    protected function getAdminRuntime(): OpenCartRuntime
+    {
+        return $this->getOpenCartRuntime(OpenCartRuntime::SCOPE_ADMIN);
+    }
+
+    protected function getCatalogRuntime(): OpenCartRuntime
+    {
+        return $this->getOpenCartRuntime(OpenCartRuntime::SCOPE_CATALOG);
     }
 
     /**

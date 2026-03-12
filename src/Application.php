@@ -23,13 +23,29 @@ use OpenCart\CLI\Commands\Core\ConfigCommand;
 use OpenCart\CLI\Commands\Database\InfoCommand;
 use OpenCart\CLI\Commands\Database\BackupCommand;
 use OpenCart\CLI\Commands\Database\RestoreCommand;
+use OpenCart\CLI\Commands\Database\CheckCommand as DatabaseCheckCommand;
+use OpenCart\CLI\Commands\Database\RepairCommand as DatabaseRepairCommand;
+use OpenCart\CLI\Commands\Database\OptimizeCommand as DatabaseOptimizeCommand;
+use OpenCart\CLI\Commands\Database\CleanupCommand as DatabaseCleanupCommand;
+use OpenCart\CLI\Commands\Cache\ClearCommand as CacheClearCommand;
+use OpenCart\CLI\Commands\Cache\RebuildCommand as CacheRebuildCommand;
 use OpenCart\CLI\Commands\Extension\ListCommand as ExtensionListCommand;
 use OpenCart\CLI\Commands\Extension\InstallCommand;
 use OpenCart\CLI\Commands\Extension\EnableCommand;
 use OpenCart\CLI\Commands\Extension\DisableCommand;
 use OpenCart\CLI\Commands\Extension\ModificationListCommand;
+use OpenCart\CLI\Commands\Category\ListCommand as CategoryListCommand;
+use OpenCart\CLI\Commands\Category\CreateCommand as CategoryCreateCommand;
+use OpenCart\CLI\Commands\Order\ListCommand as OrderListCommand;
+use OpenCart\CLI\Commands\Order\ViewCommand as OrderViewCommand;
+use OpenCart\CLI\Commands\Order\UpdateStatusCommand as OrderUpdateStatusCommand;
 use OpenCart\CLI\Commands\Product\ListCommand as ProductListCommand;
 use OpenCart\CLI\Commands\Product\CreateCommand as ProductCreateCommand;
+use OpenCart\CLI\Commands\Product\UpdateCommand as ProductUpdateCommand;
+use OpenCart\CLI\Commands\Product\DeleteCommand as ProductDeleteCommand;
+use OpenCart\CLI\Commands\User\ListCommand as UserListCommand;
+use OpenCart\CLI\Commands\User\CreateCommand as UserCreateCommand;
+use OpenCart\CLI\Commands\User\DeleteCommand as UserDeleteCommand;
 
 class Application extends BaseApplication
 {
@@ -67,13 +83,29 @@ class Application extends BaseApplication
         $commands[] = new InfoCommand();
         $commands[] = new BackupCommand();
         $commands[] = new RestoreCommand();
+        $commands[] = new DatabaseCheckCommand();
+        $commands[] = new DatabaseRepairCommand();
+        $commands[] = new DatabaseOptimizeCommand();
+        $commands[] = new DatabaseCleanupCommand();
+        $commands[] = new CacheClearCommand();
+        $commands[] = new CacheRebuildCommand();
         $commands[] = new ExtensionListCommand();
         $commands[] = new InstallCommand();
         $commands[] = new EnableCommand();
         $commands[] = new DisableCommand();
         $commands[] = new ModificationListCommand();
+        $commands[] = new CategoryListCommand();
+        $commands[] = new CategoryCreateCommand();
+        $commands[] = new OrderListCommand();
+        $commands[] = new OrderViewCommand();
+        $commands[] = new OrderUpdateStatusCommand();
         $commands[] = new ProductListCommand();
         $commands[] = new ProductCreateCommand();
+        $commands[] = new ProductUpdateCommand();
+        $commands[] = new ProductDeleteCommand();
+        $commands[] = new UserListCommand();
+        $commands[] = new UserCreateCommand();
+        $commands[] = new UserDeleteCommand();
 
         return $commands;
     }

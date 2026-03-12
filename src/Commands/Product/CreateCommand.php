@@ -1,19 +1,9 @@
 <?php
 
-/**
- * OC-CLI - OpenCart Command Line Interface
- *
- * @author    Custom Services Limited <info@opencartgreece.gr>
- * @copyright 2024 Custom Services Limited
- * @license   GPL-3.0-or-later
- * @link      https://support.opencartgreece.gr/
- * @link      https://github.com/Custom-Services-Limited/oc-cli
- */
-
 namespace OpenCart\CLI\Commands\Product;
 
 use OpenCart\CLI\Command;
-use OpenCart\CLI\Support\LanguageHelper;
+use OpenCart\CLI\Support\ProductPayloadBuilder;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Question\Question;
@@ -27,118 +17,71 @@ class CreateCommand extends Command
         $this
             ->setName('product:create')
             ->setDescription('Create a new product')
-            ->addArgument(
-                'name',
-                InputArgument::OPTIONAL,
-                'Product name'
-            )
-            ->addArgument(
-                'model',
-                InputArgument::OPTIONAL,
-                'Product model/SKU'
-            )
-            ->addArgument(
-                'price',
-                InputArgument::OPTIONAL,
-                'Product price'
-            )
-            ->addOption(
-                'description',
-                'd',
-                InputOption::VALUE_REQUIRED,
-                'Product description'
-            )
-            ->addOption(
-                'category',
-                'c',
-                InputOption::VALUE_REQUIRED,
-                'Category name or ID'
-            )
-            ->addOption(
-                'quantity',
-                null,
-                InputOption::VALUE_REQUIRED,
-                'Product quantity',
-                0
-            )
-            ->addOption(
-                'status',
-                's',
-                InputOption::VALUE_REQUIRED,
-                'Product status (enabled|disabled)',
-                'enabled'
-            )
-            ->addOption(
-                'weight',
-                'w',
-                InputOption::VALUE_REQUIRED,
-                'Product weight',
-                0
-            )
-            ->addOption(
-                'sku',
-                null,
-                InputOption::VALUE_REQUIRED,
-                'Product SKU'
-            )
-            ->addOption(
-                'format',
-                'f',
-                InputOption::VALUE_REQUIRED,
-                'Output format (table, json, yaml)',
-                'table'
-            )
-            ->addOption(
-                'interactive',
-                'i',
-                InputOption::VALUE_NONE,
-                'Interactive mode - prompt for missing values'
-            );
+            ->addArgument('name', InputArgument::OPTIONAL, 'Product name')
+            ->addArgument('model', InputArgument::OPTIONAL, 'Product model/SKU')
+            ->addArgument('price', InputArgument::OPTIONAL, 'Product price')
+            ->addOption('description', 'd', InputOption::VALUE_REQUIRED, 'Product description')
+            ->addOption('category', 'c', InputOption::VALUE_REQUIRED, 'Category name or ID')
+            ->addOption('quantity', null, InputOption::VALUE_REQUIRED, 'Product quantity', 0)
+            ->addOption('status', 's', InputOption::VALUE_REQUIRED, 'Product status (enabled|disabled)', 'enabled')
+            ->addOption('weight', 'w', InputOption::VALUE_REQUIRED, 'Product weight', 0)
+            ->addOption('sku', null, InputOption::VALUE_REQUIRED, 'Product SKU')
+            ->addOption('image', null, InputOption::VALUE_REQUIRED, 'Product image path relative to image/')
+            ->addOption('meta-title', null, InputOption::VALUE_REQUIRED, 'Product meta title')
+            ->addOption('format', 'f', InputOption::VALUE_REQUIRED, 'Output format (table, json, yaml)', 'table')
+            ->addOption('interactive', 'i', InputOption::VALUE_NONE, 'Interactive mode - prompt for missing values');
     }
 
     protected function handle()
     {
-        if (!$this->requireOpenCart()) {
+        if (!$this->requireOpenCartThreeRuntime()) {
             return 1;
         }
 
-        $db = $this->getDatabaseConnection();
-        if (!$db) {
-            $this->io->error('Could not connect to database.');
-            return 1;
-        }
-
-        // Get product data
         $productData = $this->getProductData();
-
-        if (!$productData) {
+        if (!$productData || !$this->validateProductData($productData)) {
             return 1;
         }
 
-        // Validate required fields
-        if (!$this->validateProductData($productData)) {
-            return 1;
-        }
+        $runtime = $this->getAdminRuntime();
+        $builder = new ProductPayloadBuilder($runtime);
+        $productModel = $builder->productModel();
 
-        // Check for duplicate model
-        if ($this->modelExists($db, $productData['model'])) {
+        if ($this->modelExists($productModel, $productData['model'])) {
             $this->io->error("Product with model '{$productData['model']}' already exists.");
             return 1;
         }
 
-        // Create the product
-        $productId = $this->createProduct($db, $productData);
+        $payload = $builder->buildCreatePayload([
+            'name' => $productData['name'],
+            'model' => $productData['model'],
+            'price' => $productData['price'],
+            'description' => $productData['description'],
+            'category' => $productData['category'],
+            'quantity' => $productData['quantity'],
+            'status' => $productData['status'] === 'enabled' ? 1 : 0,
+            'weight' => $productData['weight'],
+            'sku' => $productData['sku'],
+            'image' => $productData['image'],
+            'meta_title' => $productData['meta_title'],
+        ]);
 
-        if (!$productId) {
-            $this->io->error('Failed to create product.');
+        try {
+            $productId = $productModel->addProduct($payload);
+        } catch (\Throwable $e) {
+            $this->io->error('Failed to create product: ' . $e->getMessage());
             return 1;
         }
 
-        $this->displayResult($productId, $productData);
+        $this->displayResult((int) $productId, $productData);
+
         return 0;
     }
 
-    private function getProductData()
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function getProductData(): ?array
     {
         $data = [
             'name' => $this->input->getArgument('name'),
@@ -146,13 +89,14 @@ class CreateCommand extends Command
             'price' => $this->input->getArgument('price'),
             'description' => $this->input->getOption('description') ?: '',
             'category' => $this->input->getOption('category'),
-            'quantity' => (int)$this->input->getOption('quantity'),
+            'quantity' => (int) $this->input->getOption('quantity'),
             'status' => $this->normaliseStatus($this->input->getOption('status')),
-            'weight' => (float)$this->input->getOption('weight'),
-            'sku' => $this->input->getOption('sku') ?: ($this->input->getArgument('model') ?: '')
+            'weight' => (float) $this->input->getOption('weight'),
+            'sku' => $this->input->getOption('sku') ?: ($this->input->getArgument('model') ?: ''),
+            'image' => $this->input->getOption('image') ?: '',
+            'meta_title' => $this->input->getOption('meta-title') ?: null,
         ];
 
-        // Interactive mode or missing required fields
         if ($this->input->getOption('interactive') || !$data['name'] || !$data['model'] || !$data['price']) {
             $data = $this->promptForMissingData($data);
         }
@@ -160,16 +104,21 @@ class CreateCommand extends Command
         return $data;
     }
 
-    private function promptForMissingData($data)
+    /**
+     * @param array<string, mixed> $data
+     * @return array<string, mixed>
+     */
+    private function promptForMissingData(array $data): array
     {
         $helper = $this->getHelper('question');
 
         if (!$data['name']) {
             $question = new Question('Product name: ');
             $question->setValidator(function ($value) {
-                if (empty(trim($value))) {
+                if (empty(trim((string) $value))) {
                     throw new \RuntimeException('Product name cannot be empty.');
                 }
+
                 return $value;
             });
             $data['name'] = $helper->ask($this->input, $this->output, $question);
@@ -178,9 +127,10 @@ class CreateCommand extends Command
         if (!$data['model']) {
             $question = new Question('Product model/SKU: ');
             $question->setValidator(function ($value) {
-                if (empty(trim($value))) {
+                if (empty(trim((string) $value))) {
                     throw new \RuntimeException('Product model cannot be empty.');
                 }
+
                 return $value;
             });
             $data['model'] = $helper->ask($this->input, $this->output, $question);
@@ -192,25 +142,19 @@ class CreateCommand extends Command
                 if (!is_numeric($value) || $value < 0) {
                     throw new \RuntimeException('Price must be a valid positive number.');
                 }
+
                 return $value;
             });
             $data['price'] = $helper->ask($this->input, $this->output, $question);
         }
 
-        if (!$data['description']) {
-            $question = new Question('Product description (optional): ', '');
-            $data['description'] = $helper->ask($this->input, $this->output, $question);
-        }
-
-        if (!$data['category']) {
-            $question = new Question('Category name or ID (optional): ', '');
-            $data['category'] = $helper->ask($this->input, $this->output, $question);
-        }
-
         return $data;
     }
 
-    private function validateProductData($data)
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function validateProductData(array $data): bool
     {
         if (empty(trim((string) ($data['name'] ?? '')))) {
             $this->io->error('Product name is required.');
@@ -235,213 +179,70 @@ class CreateCommand extends Command
         return true;
     }
 
-    private function modelExists($db, $model)
+    /**
+     * @param mixed $productModel
+     */
+    private function modelExists($productModel, string $model): bool
     {
-        $config = $this->getOpenCartConfig();
-        $prefix = $config['db_prefix'];
+        $products = $productModel->getProducts([
+            'filter_model' => $model,
+            'start' => 0,
+            'limit' => 1,
+        ]);
 
-        $sql = "SELECT COUNT(*) AS count FROM {$prefix}product WHERE model = '" . $db->escape($model) . "'";
-        $result = $db->query($sql);
-
-        return $result && isset($result->row['count']) ? (int)$result->row['count'] > 0 : false;
+        return !empty($products) && (string) $products[0]['model'] === $model;
     }
 
-    private function createProduct($db, $data)
-    {
-        $config = $this->getOpenCartConfig();
-        $prefix = $config['db_prefix'];
-
-        try {
-            $db->query('START TRANSACTION');
-            $languageId = LanguageHelper::getDefaultLanguageId($db, $config);
-
-            // Insert into oc_product
-            $status = $data['status'] === 'enabled' ? 1 : 0;
-            $model = $db->escape($data['model']);
-            $sku = $db->escape($data['sku']);
-            $price = (float)$data['price'];
-            $quantity = (int)$data['quantity'];
-            $statusInt = (int)$status;
-            $weight = (float)$data['weight'];
-
-            $productInsert = <<<SQL
-INSERT INTO {$prefix}product (
-    model,
-    sku,
-    upc,
-    ean,
-    jan,
-    isbn,
-    mpn,
-    location,
-    price,
-    quantity,
-    status,
-    weight,
-    manufacturer_id,
-    stock_status_id,
-    shipping,
-    tax_class_id,
-    date_available,
-    date_added,
-    date_modified
-) VALUES (
-    '{$model}',
-    '{$sku}',
-    '',
-    '',
-    '',
-    '',
-    '',
-    '',
-    {$price},
-    {$quantity},
-    {$statusInt},
-    {$weight},
-    0,
-    7,
-    1,
-    0,
-    CURDATE(),
-    NOW(),
-    NOW()
-)
-SQL;
-
-            $db->query($productInsert);
-
-            $productId = $db->getLastId();
-
-            // Insert into oc_product_description
-            $name = $db->escape($data['name']);
-            $description = $db->escape($data['description']);
-            $productIdInt = (int)$productId;
-
-            $productDescriptionInsert = <<<SQL
-INSERT INTO {$prefix}product_description (
-    product_id,
-    language_id,
-    name,
-    description,
-    tag,
-    meta_title,
-    meta_description,
-    meta_keyword
-) VALUES (
-    {$productIdInt},
-    {$languageId},
-    '{$name}',
-    '{$description}',
-    '',
-    '{$name}',
-    '',
-    ''
-)
-SQL;
-
-            $db->query($productDescriptionInsert);
-
-            if ($this->tableExists($db, $prefix . 'product_to_store')) {
-                $db->query(
-                    "INSERT INTO {$prefix}product_to_store (product_id, store_id) VALUES (" .
-                    $productIdInt . ', 0)'
-                );
-            }
-
-            // Insert into oc_product_to_category if category is specified
-            if (!empty($data['category'])) {
-                $categoryId = $this->getCategoryId($db, $data['category']);
-                if ($categoryId) {
-                    $db->query(
-                        "INSERT INTO {$prefix}product_to_category (product_id, category_id) VALUES (" .
-                        $productIdInt . ', ' . (int)$categoryId . ')'
-                    );
-                }
-            }
-
-            // Commit transaction
-            $db->query('COMMIT');
-            return $productId;
-        } catch (\Exception $e) {
-            // Rollback transaction
-            try {
-                $db->query('ROLLBACK');
-            } catch (\Exception $rollbackException) {
-                // Ignore rollback failure
-            }
-            $this->io->error('Transaction failed: ' . $e->getMessage());
-            return false;
-        }
-    }
-
-    private function getCategoryId($db, $category)
-    {
-        $config = $this->getOpenCartConfig();
-        $prefix = $config['db_prefix'];
-        $languageId = LanguageHelper::getDefaultLanguageId($db, $config);
-
-        // If category is numeric, assume it's an ID
-        if (is_numeric($category)) {
-            $sql = "SELECT category_id FROM {$prefix}category WHERE category_id = " . (int)$category;
-        } else {
-            // Search by name
-            $sql = "SELECT cd.category_id FROM {$prefix}category_description cd 
-                    WHERE cd.language_id = {$languageId} AND cd.name = '" . $db->escape($category) . "'";
-        }
-
-        $result = $db->query($sql);
-        $row = $result ? $result->row : null;
-
-        return $row ? $row['category_id'] : null;
-    }
-
-    private function displayResult($productId, $data)
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function displayResult(int $productId, array $data): void
     {
         $format = $this->input->getOption('format');
-
         $result = [
             'product_id' => $productId,
             'name' => $data['name'],
             'model' => $data['model'],
-            'price' => number_format((float)$data['price'], 2),
+            'price' => number_format((float) $data['price'], 2),
             'status' => $data['status'],
-            'quantity' => $data['quantity'],
-            'weight' => $data['weight']
+            'quantity' => (int) $data['quantity'],
+            'weight' => (float) $data['weight'],
+            'sku' => $data['sku'] ?: $data['model'],
         ];
 
-        switch ($format) {
-            case 'json':
-                $this->io->writeln(json_encode($result, JSON_PRETTY_PRINT));
-                break;
-            case 'yaml':
-                $this->io->writeln("product:");
-                foreach ($result as $key => $value) {
-                    $this->io->writeln("  {$key}: {$value}");
-                }
-                break;
-            default:
-                $this->io->success("Product created successfully!");
-                $this->io->table(
-                    ['Field', 'Value'],
-                    [
-                        ['Product ID', $result['product_id']],
-                        ['Name', $result['name']],
-                        ['Model', $result['model']],
-                        ['Price', '$' . $result['price']],
-                        ['Status', ucfirst($result['status'])],
-                        ['Quantity', $result['quantity']],
-                        ['Weight', $result['weight']]
-                    ]
-                );
-                break;
+        if ($format === 'json') {
+            $this->io->writeln(json_encode($result, JSON_PRETTY_PRINT));
+            return;
         }
+
+        if ($format === 'yaml') {
+            $this->io->writeln("product:");
+            foreach ($result as $key => $value) {
+                $this->io->writeln("  {$key}: {$value}");
+            }
+            return;
+        }
+
+        $this->io->success("Product created successfully (ID {$productId}).");
+        $this->io->table(
+            ['Field', 'Value'],
+            [
+                ['Product ID', $result['product_id']],
+                ['Name', $result['name']],
+                ['Model', $result['model']],
+                ['SKU', $result['sku']],
+                ['Price', '$' . $result['price']],
+                ['Status', ucfirst((string) $result['status'])],
+                ['Quantity', $result['quantity']],
+                ['Weight', $result['weight']],
+            ]
+        );
     }
 
     /**
      * @param mixed $status
-     * @return string|null
      */
-    private function normaliseStatus($status)
+    private function normaliseStatus($status): ?string
     {
         if ($status === null) {
             return null;
