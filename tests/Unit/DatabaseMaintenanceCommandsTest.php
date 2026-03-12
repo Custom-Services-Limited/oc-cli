@@ -16,10 +16,7 @@ class DatabaseMaintenanceCommandsTest extends TestCase
     public function testCheckCommandDiscoversPrefixedTablesAndReportsOk()
     {
         $db = new FakeDb(function ($sql) {
-            if (
-                strpos($sql, 'SHOW TABLES LIKE') !== false
-                && strpos($sql, 'oc_') !== false
-            ) {
+            if (strpos($sql, 'SHOW TABLES LIKE') !== false) {
                 return [
                     ['Tables_in_demo (oc_%)' => 'oc_product'],
                     ['Tables_in_demo (oc_%)' => 'oc_order'],
@@ -49,10 +46,7 @@ class DatabaseMaintenanceCommandsTest extends TestCase
     public function testRepairCommandTreatsEngineNotesAsNonFatal()
     {
         $db = new FakeDb(function ($sql) {
-            if (
-                strpos($sql, 'SHOW TABLES LIKE') !== false
-                && strpos($sql, 'oc_') !== false
-            ) {
+            if (strpos($sql, 'SHOW TABLES LIKE') !== false) {
                 return [['Tables_in_demo (oc_%)' => 'oc_session']];
             }
 
@@ -75,10 +69,7 @@ class DatabaseMaintenanceCommandsTest extends TestCase
     public function testOptimizeCommandCanTargetExplicitTables()
     {
         $db = new FakeDb(function ($sql) {
-            if (
-                strpos($sql, 'SHOW TABLES LIKE') !== false
-                && strpos($sql, 'oc_product') !== false
-            ) {
+            if (strpos($sql, 'SHOW TABLES LIKE') !== false) {
                 return [['Tables_in_demo (oc_product)' => 'oc_product']];
             }
 
