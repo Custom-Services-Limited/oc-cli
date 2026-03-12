@@ -266,52 +266,81 @@ XML
 
     public function testProductCreateUsesResolvedLanguageAndDefaultsSkuToModel()
     {
-        $db = new FakeDb(function ($sql, FakeDb $db) {
-            if (strpos($sql, "SELECT `value` FROM oc_setting") !== false) {
-                return [['value' => '2']];
+        $capturedPayload = null;
+        $productModel = new class (&$capturedPayload) {
+            private $payload;
+            public function __construct(&$payload)
+            {
+                $this->payload = &$payload;
             }
-            if (strpos($sql, 'SELECT COUNT(*) AS count FROM oc_product WHERE model =') !== false) {
-                return [['count' => 0]];
+            public function getProducts($data = [])
+            {
+                return [];
             }
-            if (strpos($sql, 'INSERT INTO oc_product (') !== false) {
-                $db->setLastId(99);
-                return 1;
-            }
-            if (strpos($sql, 'INSERT INTO oc_product_description') !== false) {
-                return 1;
-            }
-            if (strpos($sql, 'INSERT INTO oc_product_to_store') !== false) {
-                return 1;
-            }
-            if (strpos($sql, 'START TRANSACTION') !== false || strpos($sql, 'COMMIT') !== false) {
-                return 0;
-            }
+            public function addProduct($data)
+            {
+                $this->payload = $data;
 
-            return [];
-        });
+                return 99;
+            }
+        };
+        $runtime = new class ($productModel) {
+            private $productModel;
+            public function __construct($productModel)
+            {
+                $this->productModel = $productModel;
+            }
+            public function model($route)
+            {
+                return $this->productModel;
+            }
+            public function registry()
+            {
+                return new class {
+                    public function get($key)
+                    {
+                        if ($key !== 'config') {
+                            return null;
+                        }
 
-        $command = new class ($db) extends CreateCommand {
-            private $db;
-            public function __construct($db)
+                        return new class {
+                            public function get($name)
+                            {
+                                $values = [
+                                    'config_language_id' => 2,
+                                    'config_stock_status_id' => 7,
+                                    'config_weight_class_id' => 1,
+                                    'config_length_class_id' => 1,
+                                ];
+
+                                return $values[$name] ?? null;
+                            }
+                        };
+                    }
+                };
+            }
+            public function database()
+            {
+                return new FakeDb(function () {
+                    return [];
+                });
+            }
+        };
+
+        $command = new class ($runtime) extends CreateCommand {
+            private $runtime;
+            public function __construct($runtime)
             {
                 parent::__construct();
-                $this->db = $db;
+                $this->runtime = $runtime;
             }
-            protected function requireOpenCart($require = true)
+            protected function requireOpenCartThreeRuntime()
             {
                 return true;
             }
-            protected function getDatabaseConnection()
+            protected function getAdminRuntime()
             {
-                return $this->db;
-            }
-            protected function getOpenCartConfig()
-            {
-                return ['db_prefix' => 'oc_'];
-            }
-            protected function tableExists($db, $table)
-            {
-                return $table === 'oc_product_to_store';
+                return $this->runtime;
             }
         };
         $command->setApplication(new Application());
@@ -327,51 +356,96 @@ XML
 
         $this->assertSame(0, $tester->getStatusCode());
         $this->assertStringContainsString('"product_id": 99', $tester->getDisplay());
-        $this->assertTrue($this->queryContains($db->queries, "INSERT INTO oc_product_description"));
-        $this->assertTrue($this->queryContains($db->queries, "VALUES (\n    99,\n    2,"));
-        $this->assertTrue($this->queryContains($db->queries, "'DEMO-1'"));
+        $this->assertNotNull($capturedPayload);
+        $this->assertSame('DEMO-1', $capturedPayload['sku']);
+        $this->assertSame('Demo Product', $capturedPayload['product_description'][2]['name']);
+        $this->assertSame(
+            'Demo Product',
+            $capturedPayload['product_description'][2]['meta_title']
+        );
     }
 
     public function testProductListReturnsJsonResults()
     {
-        $db = new FakeDb(function ($sql) {
-            if (strpos($sql, "SELECT `value` FROM oc_setting") !== false) {
-                return [['value' => '2']];
-            }
-            if (strpos($sql, 'SELECT DISTINCT') !== false) {
+        $productModel = new class {
+            public function getProducts($data = [])
+            {
                 return [[
                     'product_id' => 12,
                     'name' => 'Demo Product',
                     'model' => 'DEMO-1',
                     'price' => '19.9900',
                     'status' => 1,
-                    'category_name' => 'Featured',
                     'quantity' => 8,
                     'date_added' => '2026-03-12 10:00:00',
                 ]];
             }
+        };
+        $db = new FakeDb(function ($sql) {
+            if (strpos($sql, 'FROM `oc_product_to_category`') !== false) {
+                return [['name' => 'Featured']];
+            }
 
             return [];
         });
-
-        $command = new class ($db) extends ProductListCommand {
+        $runtime = new class ($productModel, $db) {
+            private $productModel;
             private $db;
-            public function __construct($db)
+            public function __construct($productModel, $db)
             {
-                parent::__construct();
+                $this->productModel = $productModel;
                 $this->db = $db;
             }
-            protected function requireOpenCart($require = true)
+            public function model($route)
             {
-                return true;
+                return $this->productModel;
             }
-            protected function getDatabaseConnection()
+            public function database()
             {
                 return $this->db;
             }
-            protected function getOpenCartConfig()
+            public function getDatabasePrefix()
             {
-                return ['db_prefix' => 'oc_'];
+                return 'oc_';
+            }
+            public function registry()
+            {
+                return new class {
+                    public function get($key)
+                    {
+                        if ($key !== 'config') {
+                            return null;
+                        }
+
+                        return new class {
+                            public function get($name)
+                            {
+                                if ($name === 'config_language_id') {
+                                    return 2;
+                                }
+
+                                return null;
+                            }
+                        };
+                    }
+                };
+            }
+        };
+
+        $command = new class ($runtime) extends ProductListCommand {
+            private $runtime;
+            public function __construct($runtime)
+            {
+                parent::__construct();
+                $this->runtime = $runtime;
+            }
+            protected function requireOpenCartThreeRuntime()
+            {
+                return true;
+            }
+            protected function getAdminRuntime()
+            {
+                return $this->runtime;
             }
         };
         $command->setApplication(new Application());
@@ -384,19 +458,4 @@ XML
         $this->assertStringContainsString('"category": "Featured"', $tester->getDisplay());
     }
 
-    /**
-     * @param list<string> $queries
-     * @param string $needle
-     * @return bool
-     */
-    private function queryContains(array $queries, $needle)
-    {
-        foreach ($queries as $query) {
-            if (strpos($query, $needle) !== false) {
-                return true;
-            }
-        }
-
-        return false;
-    }
 }
