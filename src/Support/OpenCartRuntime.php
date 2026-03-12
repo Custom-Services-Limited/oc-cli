@@ -80,6 +80,7 @@ class OpenCartRuntime
         $config->set('cache_expire', 3600);
         $registry->set('config', $config);
 
+        /** @phpstan-ignore-next-line OpenCart defines its own global Event runtime class. */
         $registry->set('event', new \Event($registry));
         $registry->set('db', $this->database());
         $registry->set('cache', new \Cache($config->get('cache_engine'), (int) $config->get('cache_expire')));
@@ -372,7 +373,8 @@ class OpenCartRuntime
 
         $sql = "SELECT * FROM `" . $prefix . "setting` WHERE store_id = '0'";
         if ($this->scope === self::SCOPE_CATALOG) {
-            $sql = "SELECT * FROM `" . $prefix . "setting` WHERE store_id = '0' OR store_id = '" . (int) $storeId . "' ORDER BY store_id ASC";
+            $sql = "SELECT * FROM `" . $prefix . "setting` WHERE store_id = '0' "
+                . "OR store_id = '" . (int) $storeId . "' ORDER BY store_id ASC";
         }
 
         $query = $db->query($sql);

@@ -72,7 +72,10 @@ class ListCommand extends Command
             } else {
                 $rows = $this->fetchBySearch($productModel, $filterData, $search);
                 $rows = array_values(array_filter($rows, function (array $row) use ($category): bool {
-                    return stripos((string) $this->resolveCategoryName((int) $row['product_id']), (string) $category) !== false;
+                    return stripos(
+                        (string) $this->resolveCategoryName((int) $row['product_id']),
+                        (string) $category
+                    ) !== false;
                 }));
             }
         } else {
@@ -129,12 +132,16 @@ class ListCommand extends Command
         $runtime = $this->getAdminRuntime();
         $db = $runtime->database();
         $prefix = $runtime->getDatabasePrefix();
-        $languageId = (int) $runtime->registry()->get('config')->get('config_language_id');
+        $languageId = (int) $runtime
+            ->registry()
+            ->get('config')
+            ->get('config_language_id');
 
         $query = $db->query(
             "SELECT cd.name FROM `" . $prefix . "product_to_category` ptc " .
             "LEFT JOIN `" . $prefix . "category_description` cd ON (ptc.category_id = cd.category_id) " .
-            "WHERE ptc.product_id = '" . $productId . "' AND cd.language_id = '" . $languageId . "' ORDER BY ptc.category_id ASC LIMIT 1"
+            "WHERE ptc.product_id = '" . $productId . "' AND cd.language_id = '" . $languageId . "' "
+            . "ORDER BY ptc.category_id ASC LIMIT 1"
         );
 
         return isset($query->row['name']) ? (string) $query->row['name'] : '';

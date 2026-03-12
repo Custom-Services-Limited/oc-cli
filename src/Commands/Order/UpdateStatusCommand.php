@@ -19,7 +19,12 @@ class UpdateStatusCommand extends Command
             ->addArgument('status', InputArgument::REQUIRED, 'Status ID or exact current-language status name')
             ->addOption('comment', null, InputOption::VALUE_REQUIRED, 'Status history comment', '')
             ->addOption('notify', null, InputOption::VALUE_NONE, 'Mark the history entry as notified')
-            ->addOption('override', null, InputOption::VALUE_NONE, 'Override fraud checks when moving into processing/complete states');
+            ->addOption(
+                'override',
+                null,
+                InputOption::VALUE_NONE,
+                'Override fraud checks when moving into processing/complete states'
+            );
     }
 
     protected function handle()

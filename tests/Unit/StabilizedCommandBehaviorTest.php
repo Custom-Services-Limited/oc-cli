@@ -10,6 +10,7 @@ use OpenCart\CLI\Commands\Extension\InstallCommand;
 use OpenCart\CLI\Commands\Extension\ListCommand as ExtensionListCommand;
 use OpenCart\CLI\Commands\Product\CreateCommand;
 use OpenCart\CLI\Commands\Product\ListCommand as ProductListCommand;
+use OpenCart\CLI\Support\OpenCartRuntime;
 use OpenCart\CLI\Tests\Helpers\FakeDb;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Tester\CommandTester;
@@ -266,12 +267,12 @@ XML
 
     public function testProductCreateUsesResolvedLanguageAndDefaultsSkuToModel()
     {
-        $capturedPayload = null;
-        $productModel = new class (&$capturedPayload) {
-            private $payload;
-            public function __construct(&$payload)
+        $capture = (object) ['payload' => null];
+        $productModel = new class ($capture) {
+            private $capture;
+            public function __construct($capture)
             {
-                $this->payload = &$payload;
+                $this->capture = $capture;
             }
             public function getProducts($data = [])
             {
@@ -279,66 +280,54 @@ XML
             }
             public function addProduct($data)
             {
-                $this->payload = $data;
+                $this->capture->payload = $data;
 
                 return 99;
             }
         };
-        $runtime = new class ($productModel) {
-            private $productModel;
-            public function __construct($productModel)
+        $runtime = $this->getMockBuilder(OpenCartRuntime::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['model', 'registry', 'database'])
+            ->getMock();
+        $runtime->method('model')->willReturn($productModel);
+        $runtime->method('registry')->willReturn(new class {
+            public function get($key)
             {
-                $this->productModel = $productModel;
-            }
-            public function model($route)
-            {
-                return $this->productModel;
-            }
-            public function registry()
-            {
+                if ($key !== 'config') {
+                    return null;
+                }
+
                 return new class {
-                    public function get($key)
+                    public function get($name)
                     {
-                        if ($key !== 'config') {
-                            return null;
-                        }
+                        $values = [
+                            'config_language_id' => 2,
+                            'config_stock_status_id' => 7,
+                            'config_weight_class_id' => 1,
+                            'config_length_class_id' => 1,
+                        ];
 
-                        return new class {
-                            public function get($name)
-                            {
-                                $values = [
-                                    'config_language_id' => 2,
-                                    'config_stock_status_id' => 7,
-                                    'config_weight_class_id' => 1,
-                                    'config_length_class_id' => 1,
-                                ];
-
-                                return $values[$name] ?? null;
-                            }
-                        };
+                        return $values[$name] ?? null;
                     }
                 };
             }
-            public function database()
-            {
-                return new FakeDb(function () {
-                    return [];
-                });
-            }
-        };
+        });
+        $runtime->method('database')->willReturn(new FakeDb(function () {
+            return [];
+        }));
 
         $command = new class ($runtime) extends CreateCommand {
-            private $runtime;
-            public function __construct($runtime)
+            private OpenCartRuntime $runtime;
+            public function __construct(OpenCartRuntime $runtime)
             {
                 parent::__construct();
                 $this->runtime = $runtime;
             }
-            protected function requireOpenCartThreeRuntime()
+            protected function requireOpenCartThreeRuntime(): bool
             {
                 return true;
             }
-            protected function getAdminRuntime()
+            protected function getAdminRuntime(): OpenCartRuntime
             {
                 return $this->runtime;
             }
@@ -356,12 +345,12 @@ XML
 
         $this->assertSame(0, $tester->getStatusCode());
         $this->assertStringContainsString('"product_id": 99', $tester->getDisplay());
-        $this->assertNotNull($capturedPayload);
-        $this->assertSame('DEMO-1', $capturedPayload['sku']);
-        $this->assertSame('Demo Product', $capturedPayload['product_description'][2]['name']);
+        $this->assertNotNull($capture->payload);
+        $this->assertSame('DEMO-1', $capture->payload['sku']);
+        $this->assertSame('Demo Product', $capture->payload['product_description'][2]['name']);
         $this->assertSame(
             'Demo Product',
-            $capturedPayload['product_description'][2]['meta_title']
+            $capture->payload['product_description'][2]['meta_title']
         );
     }
 
@@ -388,62 +377,45 @@ XML
 
             return [];
         });
-        $runtime = new class ($productModel, $db) {
-            private $productModel;
-            private $db;
-            public function __construct($productModel, $db)
+        $runtime = $this->getMockBuilder(OpenCartRuntime::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['model', 'database', 'getDatabasePrefix', 'registry'])
+            ->getMock();
+        $runtime->method('model')->willReturn($productModel);
+        $runtime->method('database')->willReturn($db);
+        $runtime->method('getDatabasePrefix')->willReturn('oc_');
+        $runtime->method('registry')->willReturn(new class {
+            public function get($key)
             {
-                $this->productModel = $productModel;
-                $this->db = $db;
-            }
-            public function model($route)
-            {
-                return $this->productModel;
-            }
-            public function database()
-            {
-                return $this->db;
-            }
-            public function getDatabasePrefix()
-            {
-                return 'oc_';
-            }
-            public function registry()
-            {
+                if ($key !== 'config') {
+                    return null;
+                }
+
                 return new class {
-                    public function get($key)
+                    public function get($name)
                     {
-                        if ($key !== 'config') {
-                            return null;
+                        if ($name === 'config_language_id') {
+                            return 2;
                         }
 
-                        return new class {
-                            public function get($name)
-                            {
-                                if ($name === 'config_language_id') {
-                                    return 2;
-                                }
-
-                                return null;
-                            }
-                        };
+                        return null;
                     }
                 };
             }
-        };
+        });
 
         $command = new class ($runtime) extends ProductListCommand {
-            private $runtime;
-            public function __construct($runtime)
+            private OpenCartRuntime $runtime;
+            public function __construct(OpenCartRuntime $runtime)
             {
                 parent::__construct();
                 $this->runtime = $runtime;
             }
-            protected function requireOpenCartThreeRuntime()
+            protected function requireOpenCartThreeRuntime(): bool
             {
                 return true;
             }
-            protected function getAdminRuntime()
+            protected function getAdminRuntime(): OpenCartRuntime
             {
                 return $this->runtime;
             }
@@ -457,5 +429,4 @@ XML
         $this->assertStringContainsString('"Demo Product"', $tester->getDisplay());
         $this->assertStringContainsString('"category": "Featured"', $tester->getDisplay());
     }
-
 }

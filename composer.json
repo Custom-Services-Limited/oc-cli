@@ -56,7 +56,7 @@
         "test:ci": "./vendor/bin/phpunit --testsuite all --coverage-clover build/clover.xml",
         "cs-check": "./vendor/bin/phpcs --standard=PSR12 src/ tests/",
         "cs-fix": "./vendor/bin/phpcbf --standard=PSR12 src/ tests/",
-        "analyze": "./vendor/bin/phpstan analyse src/",
+        "analyze": "./vendor/bin/phpstan analyse src/ --memory-limit=512M",
         "build:phar": [
             "@php -d phar.readonly=0 box.phar compile --config=box.json"
         ],
@@ -64,7 +64,7 @@
             "./vendor/bin/phpunit --testsuite all",
             "./vendor/bin/phpcbf --standard=PSR12 src/ tests/",
             "./vendor/bin/phpcs --standard=PSR12 src/ tests/",
-            "./vendor/bin/phpstan analyse src/",
+            "./vendor/bin/phpstan analyse src/ --memory-limit=512M",
             "@test:e2e"
         ]
     }

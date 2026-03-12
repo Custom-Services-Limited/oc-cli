@@ -97,7 +97,13 @@ class UpdateCommand extends Command
             return null;
         }
 
-        if ($this->input->getOption('price') !== null && (!is_numeric($this->input->getOption('price')) || (float) $this->input->getOption('price') < 0)) {
+        if (
+            $this->input->getOption('price') !== null
+            && (
+                !is_numeric($this->input->getOption('price'))
+                || (float) $this->input->getOption('price') < 0
+            )
+        ) {
             $this->io->error('Price must be a valid positive number.');
             return null;
         }
@@ -105,14 +111,20 @@ class UpdateCommand extends Command
         return [
             'name' => $this->input->getOption('name'),
             'model' => $this->input->getOption('model'),
-            'price' => $this->input->getOption('price') !== null ? (float) $this->input->getOption('price') : null,
-            'quantity' => $this->input->getOption('quantity') !== null ? (int) $this->input->getOption('quantity') : null,
+            'price' => $this->input->getOption('price') !== null
+                ? (float) $this->input->getOption('price')
+                : null,
+            'quantity' => $this->input->getOption('quantity') !== null
+                ? (int) $this->input->getOption('quantity')
+                : null,
             'status' => $status !== null ? ($status === 'enabled' ? 1 : 0) : null,
             'sku' => $this->input->getOption('sku'),
             'category' => $this->input->getOption('category'),
             'image' => $this->input->getOption('image'),
             'subtract' => $subtract !== null ? (int) $subtract : null,
-            'manufacturer_id' => $this->input->getOption('manufacturer-id') !== null ? (int) $this->input->getOption('manufacturer-id') : null,
+            'manufacturer_id' => $this->input->getOption('manufacturer-id') !== null
+                ? (int) $this->input->getOption('manufacturer-id')
+                : null,
             'description' => $this->input->getOption('description'),
             'meta_title' => $this->input->getOption('meta-title'),
         ];

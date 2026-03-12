@@ -38,7 +38,10 @@ class DeleteCommand extends Command
             return 1;
         }
 
-        if (!$this->input->getOption('force') && !$this->io->confirm("Delete product {$productId} ({$product['name']})?", false)) {
+        if (
+            !$this->input->getOption('force')
+            && !$this->io->confirm("Delete product {$productId} ({$product['name']})?", false)
+        ) {
             $this->io->warning('Deletion cancelled.');
             return 1;
         }

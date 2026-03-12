@@ -20,7 +20,13 @@ class ListCommand extends Command
             ->addOption('date-added', null, InputOption::VALUE_REQUIRED, 'Filter by creation date (YYYY-MM-DD)')
             ->addOption('date-modified', null, InputOption::VALUE_REQUIRED, 'Filter by update date (YYYY-MM-DD)')
             ->addOption('total', null, InputOption::VALUE_REQUIRED, 'Filter by exact total')
-            ->addOption('sort', null, InputOption::VALUE_REQUIRED, 'Sort field (order_id|customer|order_status|date_added|date_modified|total)', 'order_id')
+            ->addOption(
+                'sort',
+                null,
+                InputOption::VALUE_REQUIRED,
+                'Sort field (order_id|customer|order_status|date_added|date_modified|total)',
+                'order_id'
+            )
             ->addOption('order', null, InputOption::VALUE_REQUIRED, 'Sort order (asc|desc)', 'desc')
             ->addOption('page', null, InputOption::VALUE_REQUIRED, 'Page number', 1)
             ->addOption('limit', null, InputOption::VALUE_REQUIRED, 'Results per page', 20)

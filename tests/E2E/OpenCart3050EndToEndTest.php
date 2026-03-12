@@ -379,7 +379,8 @@ class OpenCart3050EndToEndTest extends TestCase
         );
 
         $historyRow = $this->fetchSingleRow(
-            "SELECT comment FROM `" . self::$dbConfig['prefix'] . "order_history` WHERE order_id = ? ORDER BY order_history_id DESC LIMIT 1",
+            "SELECT comment FROM `" . self::$dbConfig['prefix'] . "order_history` "
+            . "WHERE order_id = ? ORDER BY order_history_id DESC LIMIT 1",
             [(string) $seededOrder['order_id']]
         );
         $this->assertSame('Updated by OC-CLI E2E', $historyRow['comment']);
@@ -525,7 +526,8 @@ XML
         $this->assertTrue($this->hasExtension($postRestoreExtensions, 'shipping', 'flat'));
         $this->assertNull(
             $this->fetchSingleRow(
-                "SELECT category_id FROM `" . self::$dbConfig['prefix'] . "category_description` WHERE name = ? LIMIT 1",
+                "SELECT category_id FROM `" . self::$dbConfig['prefix'] . "category_description` "
+                . "WHERE name = ? LIMIT 1",
                 [$createdCategoryName]
             )
         );
@@ -695,33 +697,90 @@ XML
         $connection = $this->openDatabaseConnection();
         $prefix = self::$dbConfig['prefix'];
 
-        $connection->query(
-            "INSERT INTO `{$prefix}order` SET " .
-            "invoice_prefix = 'INV-2026-00', store_id = 0, store_name = '" . $connection->real_escape_string((string) $configName['value']) . "', " .
-            "store_url = '" . $connection->real_escape_string((string) $storeUrl) . "', customer_id = 0, customer_group_id = 1, " .
-            "firstname = 'CLI', lastname = 'Seed', email = 'seed@example.test', telephone = '0000000000', fax = '', custom_field = '', " .
-            "payment_firstname = 'CLI', payment_lastname = 'Seed', payment_company = '', payment_address_1 = '1 Test Street', payment_address_2 = '', " .
-            "payment_city = 'Test City', payment_postcode = '10000', payment_country = 'United Kingdom', payment_country_id = 222, payment_zone = 'Test', payment_zone_id = 0, payment_address_format = '', payment_custom_field = '', payment_method = 'Cash On Delivery', payment_code = 'cod', " .
-            "shipping_firstname = 'CLI', shipping_lastname = 'Seed', shipping_company = '', shipping_address_1 = '1 Test Street', shipping_address_2 = '', " .
-            "shipping_city = 'Test City', shipping_postcode = '10000', shipping_country = 'United Kingdom', shipping_country_id = 222, shipping_zone = 'Test', shipping_zone_id = 0, shipping_address_format = '', shipping_custom_field = '', shipping_method = 'Flat Shipping Rate', shipping_code = 'flat.flat', comment = '', total = '" . $total . "', affiliate_id = 0, commission = 0, marketing_id = 0, tracking = '', language_id = '" . $languageId . "', currency_id = 1, currency_code = 'GBP', currency_value = 1.00000000, ip = '127.0.0.1', forwarded_ip = '', user_agent = 'OC-CLI E2E', accept_language = 'en-GB', order_status_id = '" . (int) $initialStatus['order_status_id'] . "', date_added = NOW(), date_modified = NOW()"
+        $orderSql = sprintf(
+            "INSERT INTO `%sorder` SET "
+            . "invoice_prefix = 'INV-2026-00', store_id = 0, store_name = '%s', "
+            . "store_url = '%s', customer_id = 0, customer_group_id = 1, "
+            . "firstname = 'CLI', lastname = 'Seed', email = 'seed@example.test', "
+            . "telephone = '0000000000', fax = '', custom_field = '', "
+            . "payment_firstname = 'CLI', payment_lastname = 'Seed', payment_company = '', "
+            . "payment_address_1 = '1 Test Street', payment_address_2 = '', "
+            . "payment_city = 'Test City', payment_postcode = '10000', "
+            . "payment_country = 'United Kingdom', payment_country_id = 222, "
+            . "payment_zone = 'Test', payment_zone_id = 0, payment_address_format = '', "
+            . "payment_custom_field = '', payment_method = 'Cash On Delivery', "
+            . "payment_code = 'cod', shipping_firstname = 'CLI', "
+            . "shipping_lastname = 'Seed', shipping_company = '', "
+            . "shipping_address_1 = '1 Test Street', shipping_address_2 = '', "
+            . "shipping_city = 'Test City', shipping_postcode = '10000', "
+            . "shipping_country = 'United Kingdom', shipping_country_id = 222, "
+            . "shipping_zone = 'Test', shipping_zone_id = 0, shipping_address_format = '', "
+            . "shipping_custom_field = '', shipping_method = 'Flat Shipping Rate', "
+            . "shipping_code = 'flat.flat', comment = '', total = '%s', affiliate_id = 0, "
+            . "commission = 0, marketing_id = 0, tracking = '', language_id = '%d', "
+            . "currency_id = 1, currency_code = 'GBP', currency_value = 1.00000000, "
+            . "ip = '127.0.0.1', forwarded_ip = '', user_agent = 'OC-CLI E2E', "
+            . "accept_language = 'en-GB', order_status_id = '%d', "
+            . "date_added = NOW(), date_modified = NOW()",
+            $prefix,
+            $connection->real_escape_string((string) $configName['value']),
+            $connection->real_escape_string((string) $storeUrl),
+            (string) $total,
+            $languageId,
+            (int) $initialStatus['order_status_id']
         );
+        $connection->query($orderSql);
         $this->assertSame('', $connection->error);
         $orderId = $connection->insert_id;
 
         $connection->query(
-            "INSERT INTO `{$prefix}order_product` SET order_id = {$orderId}, product_id = " . (int) $product['product_id'] . ", name = '" . $connection->real_escape_string((string) $product['name']) . "', model = '" . $connection->real_escape_string((string) $product['model']) . "', quantity = 1, price = '" . (float) $product['price'] . "', total = '" . (float) $product['price'] . "', tax = '0.0000', reward = 0"
+            sprintf(
+                "INSERT INTO `%sorder_product` SET order_id = %d, product_id = %d, "
+                . "name = '%s', model = '%s', quantity = 1, price = '%s', total = '%s', "
+                . "tax = '0.0000', reward = 0",
+                $prefix,
+                $orderId,
+                (int) $product['product_id'],
+                $connection->real_escape_string((string) $product['name']),
+                $connection->real_escape_string((string) $product['model']),
+                (string) (float) $product['price'],
+                (string) (float) $product['price']
+            )
         );
         $connection->query(
-            "INSERT INTO `{$prefix}order_total` SET order_id = {$orderId}, code = 'sub_total', title = 'Sub-Total', value = '" . (float) $product['price'] . "', sort_order = 1"
+            sprintf(
+                "INSERT INTO `%sorder_total` SET order_id = %d, code = 'sub_total', "
+                . "title = 'Sub-Total', value = '%s', sort_order = 1",
+                $prefix,
+                $orderId,
+                (string) (float) $product['price']
+            )
         );
         $connection->query(
-            "INSERT INTO `{$prefix}order_total` SET order_id = {$orderId}, code = 'shipping', title = 'Flat Shipping Rate', value = '5.0000', sort_order = 3"
+            sprintf(
+                "INSERT INTO `%sorder_total` SET order_id = %d, code = 'shipping', "
+                . "title = 'Flat Shipping Rate', value = '5.0000', sort_order = 3",
+                $prefix,
+                $orderId
+            )
         );
         $connection->query(
-            "INSERT INTO `{$prefix}order_total` SET order_id = {$orderId}, code = 'total', title = 'Total', value = '" . $total . "', sort_order = 9"
+            sprintf(
+                "INSERT INTO `%sorder_total` SET order_id = %d, code = 'total', "
+                . "title = 'Total', value = '%s', sort_order = 9",
+                $prefix,
+                $orderId,
+                (string) $total
+            )
         );
         $connection->query(
-            "INSERT INTO `{$prefix}order_history` SET order_id = {$orderId}, order_status_id = " . (int) $initialStatus['order_status_id'] . ", notify = 0, comment = 'Seeded order', date_added = NOW()"
+            sprintf(
+                "INSERT INTO `%sorder_history` SET order_id = %d, order_status_id = %d, "
+                . "notify = 0, comment = 'Seeded order', date_added = NOW()",
+                $prefix,
+                $orderId,
+                (int) $initialStatus['order_status_id']
+            )
         );
         $connection->close();
 
@@ -738,13 +797,16 @@ XML
         $prefix = self::$dbConfig['prefix'];
         $connection = $this->openDatabaseConnection();
         $connection->query(
-            "INSERT INTO `{$prefix}session` SET session_id = 'e2e-session', data = '', expire = DATE_ADD(NOW(), INTERVAL 1 HOUR)"
+            "INSERT INTO `{$prefix}session` SET session_id = 'e2e-session', "
+            . "data = '', expire = DATE_ADD(NOW(), INTERVAL 1 HOUR)"
         );
         $connection->query(
-            "INSERT INTO `{$prefix}api_session` SET session_id = 'e2e-api', api_id = 1, ip = '127.0.0.1', date_added = NOW(), date_modified = NOW()"
+            "INSERT INTO `{$prefix}api_session` SET session_id = 'e2e-api', api_id = 1, "
+            . "ip = '127.0.0.1', date_added = NOW(), date_modified = NOW()"
         );
         $connection->query(
-            "INSERT INTO `{$prefix}customer_online` SET ip = '127.0.0.1', customer_id = 0, url = '/', referer = '', date_added = NOW()"
+            "INSERT INTO `{$prefix}customer_online` SET ip = '127.0.0.1', customer_id = 0, "
+            . "url = '/', referer = '', date_added = NOW()"
         );
         $connection->close();
     }

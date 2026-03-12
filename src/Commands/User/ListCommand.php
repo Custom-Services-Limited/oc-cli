@@ -15,8 +15,20 @@ class ListCommand extends Command
             ->setName('user:list')
             ->setDescription('List admin users')
             ->addOption('group', null, InputOption::VALUE_REQUIRED, 'Filter by user group ID')
-            ->addOption('status', null, InputOption::VALUE_REQUIRED, 'Filter by status (enabled|disabled|all)', 'all')
-            ->addOption('sort', null, InputOption::VALUE_REQUIRED, 'Sort field (username|status|date_added)', 'username')
+            ->addOption(
+                'status',
+                null,
+                InputOption::VALUE_REQUIRED,
+                'Filter by status (enabled|disabled|all)',
+                'all'
+            )
+            ->addOption(
+                'sort',
+                null,
+                InputOption::VALUE_REQUIRED,
+                'Sort field (username|status|date_added)',
+                'username'
+            )
             ->addOption('order', null, InputOption::VALUE_REQUIRED, 'Sort order (asc|desc)', 'asc')
             ->addOption('page', null, InputOption::VALUE_REQUIRED, 'Page number', 1)
             ->addOption('limit', null, InputOption::VALUE_REQUIRED, 'Results per page', 20)

@@ -260,3 +260,32 @@ jobs:
         fi
         
         echo "Documentation structure is valid!"
+
+  pr-merge-gate:
+    runs-on: ubuntu-latest
+    name: PR Merge Gate
+    if: ${{ always() && github.event_name == 'pull_request' }}
+    needs: [test, code-quality, e2e, security, documentation]
+    permissions:
+      contents: read
+
+    steps:
+    - name: Enforce required PR checks
+      env:
+        TEST_RESULT: ${{ needs.test.result }}
+        CODE_QUALITY_RESULT: ${{ needs.code-quality.result }}
+        E2E_RESULT: ${{ needs.e2e.result }}
+        SECURITY_RESULT: ${{ needs.security.result }}
+        DOCUMENTATION_RESULT: ${{ needs.documentation.result }}
+      run: |
+        echo "test=$TEST_RESULT"
+        echo "code-quality=$CODE_QUALITY_RESULT"
+        echo "e2e=$E2E_RESULT"
+        echo "security=$SECURITY_RESULT"
+        echo "documentation=$DOCUMENTATION_RESULT"
+
+        [ "$TEST_RESULT" = "success" ] || exit 1
+        [ "$CODE_QUALITY_RESULT" = "success" ] || exit 1
+        [ "$E2E_RESULT" = "success" ] || exit 1
+        [ "$SECURITY_RESULT" = "success" ] || exit 1
+        [ "$DOCUMENTATION_RESULT" = "success" ] || exit 1

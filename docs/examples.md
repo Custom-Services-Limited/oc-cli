@@ -2,20 +2,22 @@
 
 ## Basic inspection
 
-Run from an OpenCart root:
+Run runtime-backed commands from a real OpenCart 3.x root:
 
 ```bash
 oc core:version
 oc core:check-requirements
-oc db:info
+oc product:list --limit=5
 ```
 
-Run from outside the store with direct DB flags:
+Run from outside the store by pointing at an OpenCart root:
 
 ```bash
 oc core:version \
   --opencart-root=/var/www/opencart
 ```
+
+Run DB-native commands from anywhere with direct DB flags:
 
 ```bash
 oc db:info \
@@ -70,6 +72,41 @@ oc db:restore nightly.sql --force
 oc db:restore nightly.sql --ignore-errors
 ```
 
+Maintenance commands:
+
+```bash
+oc db:check
+oc db:repair oc_product
+oc db:optimize product product_description
+oc db:cleanup
+```
+
+Structured output for maintenance automation:
+
+```bash
+oc db:check --format=json | jq '.[].status'
+oc db:cleanup --format=yaml
+```
+
+## Cache maintenance
+
+These commands require a real OpenCart 3.x installation root.
+
+Clear specific cache types:
+
+```bash
+oc cache:clear --type=data
+oc cache:clear --type=theme
+oc cache:clear --type=all
+```
+
+Refresh modification output and clear related caches:
+
+```bash
+oc cache:rebuild --type=modification
+oc cache:rebuild --type=all
+```
+
 ## Extensions and modifications
 
 List enabled extension rows:
@@ -99,6 +136,30 @@ Import an OCMOD XML package:
 oc extension:install ./upload.ocmod.xml
 oc extension:install ./upload.ocmod.xml --activate
 oc modification:list
+```
+
+## Categories
+
+These commands require a real OpenCart 3.x installation root.
+
+List categories:
+
+```bash
+oc category:list
+oc category:list --name=Desktops
+oc category:list --sort=name --order=desc --format=json
+```
+
+Create categories:
+
+```bash
+oc category:create "CLI Specials"
+oc category:create "CLI Accessories" \
+  --parent-id=20 \
+  --description="Created by OC-CLI" \
+  --keyword=cli-accessories \
+  --store=0,1 \
+  --status=enabled
 ```
 
 ## Product listing
@@ -141,7 +202,9 @@ oc product:create "Samsung Galaxy S21" "SGS21" "799.99" \
   --quantity=50 \
   --status=enabled \
   --weight=0.17 \
-  --sku=SAMSUNG-SGS21
+  --sku=SAMSUNG-SGS21 \
+  --image=catalog/demo/samsung-galaxy-s21.jpg \
+  --meta-title="Samsung Galaxy S21"
 ```
 
 Interactive creation:
@@ -157,6 +220,75 @@ oc product:create "API Product" "API-001" "99.99" --format=json
 oc product:list --format=json | jq '.[].model'
 ```
 
+## Product updates and deletion
+
+Update a few fields:
+
+```bash
+oc product:update 100 --price=24.99 --quantity=12 --status=enabled
+oc product:update 100 --name="CLI Product Updated" --description="Updated from OC-CLI"
+```
+
+Update assignment and inventory behavior:
+
+```bash
+oc product:update 100 \
+  --category=20,24 \
+  --sku=CLI-100 \
+  --image=catalog/demo/cli-product.jpg \
+  --subtract=1
+```
+
+Delete a product:
+
+```bash
+oc product:delete 100 --force
+```
+
+## Orders
+
+These commands require a real OpenCart 3.x installation root.
+
+List and inspect orders:
+
+```bash
+oc order:list
+oc order:list --customer=John --status-id=1 --limit=10
+oc order:view 1
+oc order:view 1 --format=json | jq '.order.order_status_id'
+```
+
+Update order status:
+
+```bash
+oc order:update-status 1 Processing --comment="Validated by CLI" --notify
+oc order:update-status 1 Complete --comment="Released for fulfillment" --override
+```
+
+## Admin users
+
+These commands manage admin users, not storefront customers. They require a real OpenCart 3.x installation root.
+
+List users:
+
+```bash
+oc user:list
+oc user:list --status=enabled
+oc user:list --group=1 --sort=date_added --order=desc --format=json
+```
+
+Create and delete users:
+
+```bash
+oc user:create cli-admin cli-admin@example.com 'StrongPass!123' \
+  --firstname=CLI \
+  --lastname=Admin \
+  --group-id=1 \
+  --status=enabled
+
+oc user:delete cli-admin --force
+```
+
 ## Maintenance snippets
 
 Nightly backup:
@@ -169,4 +301,11 @@ Requirements check:
 
 ```bash
 oc core:check-requirements --format=yaml
+```
+
+Nightly maintenance:
+
+```bash
+0 3 * * * cd /var/www/opencart && /usr/bin/env oc cache:rebuild --type=all
+15 3 * * * cd /var/www/opencart && /usr/bin/env oc db:cleanup
 ```

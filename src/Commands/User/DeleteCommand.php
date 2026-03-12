@@ -16,7 +16,12 @@ class DeleteCommand extends Command
             ->setName('user:delete')
             ->setDescription('Delete an admin user')
             ->addArgument('user', InputArgument::REQUIRED, 'User ID or username')
-            ->addOption('force', null, InputOption::VALUE_NONE, 'Delete without confirmation and bypass the last-admin guard');
+            ->addOption(
+                'force',
+                null,
+                InputOption::VALUE_NONE,
+                'Delete without confirmation and bypass the last-admin guard'
+            );
     }
 
     protected function handle()
@@ -38,8 +43,14 @@ class DeleteCommand extends Command
             return 1;
         }
 
-        if (!$this->input->getOption('force') && $this->isProtectedLastAdministrator((int) $user['user_id'])) {
-            $this->io->error('Refusing to delete the last enabled administrator-equivalent user. Use --force to override.');
+        if (
+            !$this->input->getOption('force')
+            && $this->isProtectedLastAdministrator((int) $user['user_id'])
+        ) {
+            $this->io->error(
+                'Refusing to delete the last enabled administrator-equivalent user. '
+                . 'Use --force to override.'
+            );
             return 1;
         }
 

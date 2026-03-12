@@ -487,7 +487,10 @@ abstract class Command extends BaseCommand
         }
 
         if (!$this->openCartRoot) {
-            $this->io->error('This command requires a real OpenCart installation root. Database-only flags are not sufficient.');
+            $this->io->error(
+                'This command requires a real OpenCart installation root. '
+                . 'Database-only flags are not sufficient.'
+            );
             return false;
         }
 

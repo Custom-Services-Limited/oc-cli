@@ -32,15 +32,15 @@ src/Application.php     Command registration
 src/Command.php         Shared OpenCart and DB helpers
 src/Commands/           Shipped command implementations
 src/Support/            Shared support helpers
-tests/                  Unit and integration tests
+tests/                  Unit, integration, and E2E tests
 docs/                   User-facing documentation
 ```
 
 ## Shipped command surface
 
-The v1 branch stabilizes the commands registered in `src/Application.php`. Do not document or test unregistered roadmap commands as if they exist.
+The stable surface is whatever is registered in `src/Application.php`. Do not document or test roadmap ideas as if they exist.
 
-Current registered commands:
+Current registered OpenCart-focused commands:
 
 - `core:version`
 - `core:check-requirements`
@@ -48,17 +48,33 @@ Current registered commands:
 - `db:info`
 - `db:backup`
 - `db:restore`
+- `db:check`
+- `db:repair`
+- `db:optimize`
+- `db:cleanup`
+- `cache:clear`
+- `cache:rebuild`
 - `extension:list`
 - `extension:install`
 - `extension:enable`
 - `extension:disable`
 - `modification:list`
+- `category:list`
+- `category:create`
+- `order:list`
+- `order:view`
+- `order:update-status`
 - `product:list`
 - `product:create`
+- `product:update`
+- `product:delete`
+- `user:list`
+- `user:create`
+- `user:delete`
 
 ## Command conventions
 
-- Extend `OpenCart\\CLI\\Command`.
+- Extend `OpenCart\CLI\Command`.
 - Put command registration in `src/Application.php`.
 - Keep help text aligned with actual behavior.
 - Prefer explicit capability checks for OpenCart schema/version differences.
@@ -115,21 +131,31 @@ The base command supports:
 - DB access through `getDatabaseConnection()`
 - schema capability checks through shared helpers such as `tableExists()`
 
+Runtime-backed commands also rely on the OpenCart 3.x bootstrap layer in `src/Support/`. When documenting or extending `cache:*`, `category:*`, `order:*`, `product:*`, and `user:*`, keep the docs explicit that they require a real OpenCart 3.x installation root because they call OpenCart models and cache logic directly.
+
 Use direct DB flags when a local `config.php` is not available:
 
 ```bash
-php bin/oc product:list \
+php bin/oc db:info \
   --db-host=localhost \
   --db-user=oc_user \
   --db-pass=secret \
   --db-name=opencart
 ```
 
+Use `--opencart-root` when a command needs the OpenCart runtime:
+
+```bash
+php bin/oc product:list \
+  --opencart-root=/var/www/opencart \
+  --status=enabled
+```
+
 ## Testing expectations
 
 - Add unit tests for command wiring, validation, and unsupported-path handling.
 - Add DB-backed success-path tests when behavior depends on SQL generation.
-- Add or update the OpenCart 3.0.5.0 E2E harness when changes affect real installer, database, or binary behavior.
+- Add or update the OpenCart 3.0.5.0 E2E harness when changes affect the real installer, database, or binary behavior.
 - Keep `composer test` free of risky tests and runtime deprecations.
 - Keep `composer test:e2e` passing against the committed OpenCart fixture and its seeded demo data.
 - Add smoke coverage for CLI entry points when runtime signatures or bootstrapping changes.
@@ -139,6 +165,7 @@ Run targeted suites:
 ```bash
 ./vendor/bin/phpunit tests/Unit
 ./vendor/bin/phpunit tests/Integration
+./vendor/bin/phpunit tests/E2E
 ```
 
 ## Documentation expectations
@@ -147,3 +174,4 @@ Run targeted suites:
 - Keep examples consistent with actual arguments and options.
 - Do not reintroduce `.oc-cli.yml` documentation unless runtime support is added.
 - Treat `extension:install` as OCMOD XML import only unless the implementation changes.
+- Keep runtime-backed command docs explicit about the OpenCart 3.x installation-root requirement.
