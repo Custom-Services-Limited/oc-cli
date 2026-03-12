@@ -142,7 +142,8 @@ CREATE TABLE `oc_language` (
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8mb3;
 ```
 
-**Default Language**: ID 1 (English - 'en-gb')
+**Default Language**: installation-specific. OC-CLI resolves the configured default
+language from `config_language_id` and falls back to the default language row when needed.
 
 ## CLI Command to Database Field Mapping
 
@@ -185,7 +186,7 @@ The CLI automatically provides these required fields:
 | `meta_title` | `oc_product_description` | `name` | Product name |
 | `meta_description` | `oc_product_description` | `''` | No meta description |
 | `meta_keyword` | `oc_product_description` | `''` | No meta keywords |
-| `language_id` | `oc_product_description` | `1` | English language |
+| `language_id` | `oc_product_description` | resolved default language ID | Active default language |
 
 ## Product Extended Tables
 

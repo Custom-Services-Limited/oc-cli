@@ -1,339 +1,219 @@
-# OC-CLI - OpenCart Command Line Interface
+# OC-CLI
 
-A command-line interface for OpenCart, inspired by WP-CLI. OC-CLI provides a set of command-line tools for managing OpenCart installations without using a web browser.
+OC-CLI is a Symfony Console CLI for OpenCart. The current workspace ships a stable command surface for store inspection, configuration, database operations, extensions, modifications, products, categories, orders, cache maintenance, and admin-user management.
 
-**Created by [Custom Services Limited](https://support.opencartgreece.gr/) - Your OpenCart experts.**
+Created by [Custom Services Limited](https://support.opencartgreece.gr/).
 
-## Features
+## Stable command surface
 
-- **System Management**: Check installation health, view version information
-- **Database Operations**: Backup, restore, and manage database
-- **Product Management**: Create, update, list, and delete products and categories
-- **Order Management**: View and manage orders
-- **Extension Management**: Install, activate, and manage extensions
-- **Cache Management**: Clear and rebuild caches
-- **User Management**: Manage admin users
+Registered OpenCart-focused commands in this repository:
+
+### Core
+
+- `core:version`
+- `core:check-requirements`
+- `core:config`
+
+### Database
+
+- `db:info`
+- `db:backup`
+- `db:restore`
+- `db:check`
+- `db:repair`
+- `db:optimize`
+- `db:cleanup`
+
+### Cache
+
+- `cache:clear`
+- `cache:rebuild`
+
+### Extensions and modifications
+
+- `extension:list`
+- `extension:install`
+- `extension:enable`
+- `extension:disable`
+- `modification:list`
+
+### Catalog
+
+- `category:list`
+- `category:create`
+- `product:list`
+- `product:create`
+- `product:update`
+- `product:delete`
+
+### Orders
+
+- `order:list`
+- `order:view`
+- `order:update-status`
+
+### Admin users
+
+- `user:list`
+- `user:create`
+- `user:delete`
 
 ## Requirements
 
-- PHP 7.0 or higher
-- OpenCart 2.x, 3.x, or 4.x installation
-- MySQL/MySQLi support
-- Composer (for installation)
+- PHP 7.4 or newer
+- Composer
+- MySQL or MariaDB access for the target OpenCart database
+- A real OpenCart installation root for runtime-backed commands
+
+## Support notes
+
+- OC-CLI reads OpenCart connection details from `config.php` and related installation files, or from direct DB flags such as `--db-host`, `--db-user`, and `--db-name`.
+- Runtime-backed commands bootstrap real OpenCart 3.x models and cache paths. These commands require `--opencart-root=/path/to/opencart` or execution from inside a real OpenCart 3.x installation root:
+  - `cache:*`
+  - `category:*`
+  - `order:*`
+  - `product:*`
+  - `user:*`
+- `core:config --admin` is deprecated. OpenCart stores settings in shared rows, so the flag is accepted only for backward compatibility and has no effect.
+- `extension:install` imports OCMOD XML packages into the `*_modification` table. It is not a generic marketplace or ZIP installer.
+- Unsupported schema or version combinations fail explicitly instead of falling back to guessed SQL behavior.
 
 ## Installation
 
-### Via Composer (Recommended)
+Global install:
 
 ```bash
 composer global require custom-services-limited/oc-cli
 ```
 
-### Manual Installation
+Project-local install:
 
-1. Clone the repository:
+```bash
+composer require --dev custom-services-limited/oc-cli
+```
+
+From this repository:
+
 ```bash
 git clone https://github.com/Custom-Services-Limited/oc-cli.git
 cd oc-cli
-```
-
-2. Install dependencies:
-```bash
 composer install
-```
-
-3. Make the binary executable:
-```bash
 chmod +x bin/oc
 ```
 
-4. Add to your PATH (optional):
-```bash
-echo 'export PATH="$PATH:'$(pwd)'/bin"' >> ~/.bashrc
-source ~/.bashrc
-```
+## Quick start
 
-## Quick Start
+Run inside a real OpenCart 3.x root:
 
-Screenshot:
-![alt text](screenshots/image1.png)
-
-1. Navigate to your OpenCart installation directory:
-```bash
-cd /path/to/your/opencart
-```
-
-2. Check if OC-CLI can detect your installation:
 ```bash
 oc core:version
-```
-
-3. List all available commands:
-```bash
-oc list
-```
-
-## Basic Usage
-
-### Check OpenCart Version
-```bash
-oc core:version
-```
-
-### System Information
-```bash
 oc core:check-requirements
+oc product:list --limit=5
 ```
 
-### Database Operations
+Run DB-native commands from anywhere with direct DB credentials:
+
 ```bash
-# Show database info
-oc db:info
-
-# Backup database
-oc db:backup backup.sql
-
-# Restore database
-oc db:restore backup.sql
+oc db:info \
+  --db-host=localhost \
+  --db-user=oc_user \
+  --db-pass=secret \
+  --db-name=opencart
 ```
 
-### Extension Management
+Run runtime-backed commands from anywhere by pointing at a store root:
+
 ```bash
-# List installed extensions
-oc extension:list
+oc product:list --opencart-root=/var/www/opencart --status=enabled --limit=10
+```
 
-# Install an extension
-oc extension:install extension_name
+## Common examples
 
-# Enable an extension
-oc extension:enable extension_name
+Version and configuration:
 
-# Disable an extension
-oc extension:disable extension_name
+```bash
+oc core:version --opencart
+oc core:config list
+oc core:config get config_name
+oc core:config set config_maintenance 1
+```
 
-# List modifications
+Database maintenance:
+
+```bash
+oc db:backup nightly.sql --compress
+oc db:check
+oc db:optimize oc_product oc_order
+oc db:cleanup
+```
+
+Extensions and modifications:
+
+```bash
+oc extension:list payment
+oc extension:disable shipping:flat
+oc extension:enable shipping:flat
+oc extension:install ./build/test.ocmod.xml --activate
 oc modification:list
 ```
 
-## Implementation Status
-
-✅ = Implemented | 🚧 = Coming Soon (Help us by contributing!)
-
-### Core Commands ✅
-- ✅ `core:version` - Display version information
-- ✅ `core:check-requirements` - Check system requirements
-- ✅ `core:config` - Manage OpenCart configuration
-
-### Database Commands ✅
-- ✅ `db:info` - Display database connection information
-- ✅ `db:backup` - Create database backup
-- ✅ `db:restore` - Restore database from backup
-
-### Extension Commands ✅
-- ✅ `extension:list` - List installed extensions
-- ✅ `extension:install` - Install an extension
-- ✅ `extension:enable` - Enable an extension
-- ✅ `extension:disable` - Disable an extension
-- ✅ `modification:list` - List installed modifications
-
-### Product Commands ✅
-- ✅ `product:list` - List products with filtering and search
-- ✅ `product:create` - Create a new product with full validation
-- 🚧 `product:update` - Update an existing product
-- 🚧 `product:delete` - Delete a product
-- 🚧 `category:list` - List categories
-- 🚧 `category:create` - Create a new category
-
-### Order Commands 🚧
-- 🚧 `order:list` - List orders
-- 🚧 `order:view` - View order details
-- 🚧 `order:update-status` - Update order status
-
-### Cache Commands 🚧
-- 🚧 `cache:clear` - Clear all caches
-- 🚧 `cache:rebuild` - Rebuild caches
-
-### User Commands 🚧
-- 🚧 `user:list` - List admin users
-- 🚧 `user:create` - Create a new admin user
-- 🚧 `user:delete` - Delete an admin user
-
-## Available Commands
-
-## Configuration
-
-OC-CLI can be configured using a `.oc-cli.yml` file in your OpenCart root directory:
-
-```yaml
-# .oc-cli.yml
-database:
-  backup_path: ./backups
-  
-output:
-  format: table  # table, json, yaml
-  
-cache:
-  enabled: true
-```
-
-## Database Connection Options
-
-OC-CLI supports two methods for database connectivity:
-
-### 1. OpenCart Installation Method (Traditional)
-When running commands from within an OpenCart directory, OC-CLI automatically detects and reads database configuration from `config.php`.
-
-### 2. Direct Database Connection (New)
-For remote database access or when `config.php` is not available, use command-line database options:
+Categories and products:
 
 ```bash
-# Connect directly to database
-oc product:list --db-host=localhost --db-user=oc_user --db-pass=password --db-name=opencart_db
-
-# All database connection options
---db-host=<hostname>     # Database hostname (default: localhost)
---db-user=<username>     # Database username
---db-pass=<password>     # Database password
---db-name=<database>     # Database name
---db-port=<port>         # Database port (default: 3306)
---db-prefix=<prefix>     # Database table prefix (default: oc_)
+oc category:list --name=Desktops
+oc category:create "CLI Specials" --parent-id=20 --keyword=cli-specials
+oc product:create "CLI Demo Product" "CLI-DEMO-001" "19.99" --category=20 --status=enabled
+oc product:update 100 --price=24.99 --quantity=8 --status=enabled
+oc product:delete 100 --force
 ```
 
-## Database Schema Reference
-
-For detailed information about OpenCart's database structure and how OC-CLI interacts with it:
-
-- **[Database Schema Documentation](docs/database-schema.md)** - Comprehensive reference for all OpenCart tables
-- **[OpenCart 2.x & 3.x Structure](tests/oc2x_and_3x_db_structure.sql)** - Complete database schema SQL file
-- **[Development Guide](docs/development.md)** - Database integration patterns for developers
-- **[Commands Reference](docs/commands.md)** - Detailed command examples with database usage
-
-## Output Formats
-
-Most commands support multiple output formats:
+Orders:
 
 ```bash
-# Table format (default)
-oc product:list
+oc order:list --customer=John --limit=10
+oc order:view 1
+oc order:update-status 1 Processing --comment="Approved from CLI" --notify
+```
 
-# JSON format
-oc product:list --format=json
+Cache and admin users:
 
-# YAML format
-oc product:list --format=yaml
+```bash
+oc cache:clear --type=all
+oc cache:rebuild --type=all
+oc user:list --status=enabled
+oc user:create cli-admin cli-admin@example.com 'StrongPass!123' --firstname=CLI --lastname=Admin
+oc user:delete cli-admin --force
+```
+
+## Output formats
+
+Commands that expose `--format` support:
+
+- `table`
+- `json`
+- `yaml`
+
+Example:
+
+```bash
+oc order:list --format=json
 ```
 
 ## Development
 
-### Running Tests
+Useful checks:
+
 ```bash
 composer test
-```
-
-### Code Style
-```bash
+composer test:e2e
 composer cs-check
-composer cs-fix
+composer analyze
 ```
 
-### Contributing
+Additional documentation:
 
-We welcome contributions! Many commands are marked as "🚧 Coming Soon" and need implementation.
-
-**How to contribute:**
-1. Fork the repository
-2. Look for commands marked with 🚧 in the Implementation Status section
-3. Create a feature branch: `git checkout -b feature/implement-product-commands`
-4. Implement the command following existing patterns in `src/Commands/`
-5. Add tests for new functionality in `tests/`
-6. Ensure all tests pass: `composer test`
-7. Submit a pull request
-
-**Priority commands needing implementation:**
-- Additional product management commands (product:update, product:delete)
-- Order management commands
-- Cache management commands
-- User management commands
-- Category management commands
-
-**Development setup:**
-```bash
-git clone https://github.com/Custom-Services-Limited/oc-cli.git
-cd oc-cli
-composer install
-composer test
-```
-
-## Extending OC-CLI
-
-You can create custom commands by extending the base Command class:
-
-```php
-<?php
-
-namespace OpenCart\CLI\Commands\Custom;
-
-use OpenCart\CLI\Command;
-
-class MyCustomCommand extends Command
-{
-    protected function configure()
-    {
-        $this
-            ->setName('custom:my-command')
-            ->setDescription('My custom command description');
-    }
-
-    protected function handle()
-    {
-        $this->io->success('Hello from my custom command!');
-        return 0;
-    }
-}
-```
-
-## License
-
-OC-CLI is open source software licensed under the [GPL v3 license](LICENSE).
-
-## Support
-
-- [GitHub Issues](https://github.com/Custom-Services-Limited/oc-cli/issues) - Bug reports and feature requests
-- [Custom Services Limited](https://support.opencartgreece.gr/) - Professional OpenCart support
-- [OpenCart Community Forum](https://forum.opencart.com/) - General support
-
-## About Custom Services Limited
-
-Custom Services Limited is a professional OpenCart development and support company. We provide:
-
-- OpenCart development and customization
-- Extension development
-- Performance optimization
-- Technical support and consulting
-- Training and documentation
-
-Visit us at [https://support.opencartgreece.gr/](https://support.opencartgreece.gr/) for more information about our services.
-
-## Legal Notice & Disclaimer
-
-**Important:** This project is an independent, open-source tool created by Custom Services Limited and is **NOT affiliated with, endorsed by, or officially connected to OpenCart Ltd. or the official OpenCart project**.
-
-- **OpenCart** is a registered trademark of OpenCart Ltd.
-- This CLI tool is developed independently to help OpenCart users manage their installations
-- We acknowledge that OpenCart is a trademark of OpenCart Ltd.
-- This project is released under the GPL v3 license as free, open-source software
-- Use of the OpenCart name in this project is purely for descriptive purposes to indicate compatibility
-- Custom Services Limited and the contributors of this project disclaim any affiliation with OpenCart Ltd.
-- This software is provided "as is" without warranty of any kind
-- Users assume all responsibility for using this tool with their OpenCart installations
-
-
-## Changelog
-
-### 1.0.0
-- Initial release with core commands
-- Database backup/restore functionality
-- Extension management commands
-- System requirements checking
-- OpenCart configuration management
-- PHP 7.0+ compatibility
+- [Installation guide](docs/installation.md)
+- [Commands reference](docs/commands.md)
+- [Examples](docs/examples.md)
+- [Development guide](docs/development.md)
+- [Database schema notes](docs/database-schema.md)

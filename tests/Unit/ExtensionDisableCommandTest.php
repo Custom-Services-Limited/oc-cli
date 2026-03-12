@@ -27,7 +27,10 @@ class ExtensionDisableCommandTest extends TestCase
 
     public function testExtensionDisableCommandDescription()
     {
-        $this->assertEquals('Disable an extension', $this->command->getDescription());
+        $this->assertEquals(
+            'Disable an extension entry from the extension table',
+            $this->command->getDescription()
+        );
     }
 
     public function testExtensionDisableCommandArguments()
@@ -116,7 +119,10 @@ class ExtensionDisableCommandTest extends TestCase
         $extensionArg = $definition->getArgument('extension');
 
         $this->assertTrue($extensionArg->isRequired());
-        $this->assertEquals('Extension code or name to disable', $extensionArg->getDescription());
+        $this->assertEquals(
+            'Extension identifier. Use type:code when multiple entries share a code.',
+            $extensionArg->getDescription()
+        );
     }
 
     public function testExtensionDisableCommandArgumentValidation()

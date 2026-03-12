@@ -27,7 +27,7 @@ class ExtensionListCommandTest extends TestCase
 
     public function testExtensionListCommandDescription()
     {
-        $this->assertEquals('List installed extensions', $this->command->getDescription());
+        $this->assertEquals('List enabled extensions', $this->command->getDescription());
     }
 
     public function testExtensionListCommandArguments()

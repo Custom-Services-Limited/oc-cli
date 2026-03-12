@@ -23,25 +23,55 @@ use OpenCart\CLI\Commands\Core\ConfigCommand;
 use OpenCart\CLI\Commands\Database\InfoCommand;
 use OpenCart\CLI\Commands\Database\BackupCommand;
 use OpenCart\CLI\Commands\Database\RestoreCommand;
+use OpenCart\CLI\Commands\Database\CheckCommand as DatabaseCheckCommand;
+use OpenCart\CLI\Commands\Database\RepairCommand as DatabaseRepairCommand;
+use OpenCart\CLI\Commands\Database\OptimizeCommand as DatabaseOptimizeCommand;
+use OpenCart\CLI\Commands\Database\CleanupCommand as DatabaseCleanupCommand;
+use OpenCart\CLI\Commands\Cache\ClearCommand as CacheClearCommand;
+use OpenCart\CLI\Commands\Cache\RebuildCommand as CacheRebuildCommand;
 use OpenCart\CLI\Commands\Extension\ListCommand as ExtensionListCommand;
 use OpenCart\CLI\Commands\Extension\InstallCommand;
 use OpenCart\CLI\Commands\Extension\EnableCommand;
 use OpenCart\CLI\Commands\Extension\DisableCommand;
 use OpenCart\CLI\Commands\Extension\ModificationListCommand;
+use OpenCart\CLI\Commands\Category\ListCommand as CategoryListCommand;
+use OpenCart\CLI\Commands\Category\CreateCommand as CategoryCreateCommand;
+use OpenCart\CLI\Commands\Order\ListCommand as OrderListCommand;
+use OpenCart\CLI\Commands\Order\ViewCommand as OrderViewCommand;
+use OpenCart\CLI\Commands\Order\UpdateStatusCommand as OrderUpdateStatusCommand;
 use OpenCart\CLI\Commands\Product\ListCommand as ProductListCommand;
 use OpenCart\CLI\Commands\Product\CreateCommand as ProductCreateCommand;
+use OpenCart\CLI\Commands\Product\UpdateCommand as ProductUpdateCommand;
+use OpenCart\CLI\Commands\Product\DeleteCommand as ProductDeleteCommand;
+use OpenCart\CLI\Commands\User\ListCommand as UserListCommand;
+use OpenCart\CLI\Commands\User\CreateCommand as UserCreateCommand;
+use OpenCart\CLI\Commands\User\DeleteCommand as UserDeleteCommand;
 
 class Application extends BaseApplication
 {
-    // OC-CLI version
-    public const VERSION = '1.0.2';
+    // Fallback version when no build metadata or Git tag can be resolved.
+    public const VERSION = '0.0.0-dev';
     public const NAME = 'OC-CLI';
+
+    /**
+     * @var string|null
+     */
+    private static $resolvedVersion;
 
     public function __construct()
     {
-        parent::__construct(self::NAME, self::VERSION);
+        parent::__construct(self::NAME, self::resolveVersion());
 
         $this->addCommands($this->getDefaultCommands());
+    }
+
+    public static function resolveVersion(bool $refresh = false): string
+    {
+        if ($refresh || self::$resolvedVersion === null) {
+            self::$resolvedVersion = self::detectVersion();
+        }
+
+        return self::$resolvedVersion;
     }
 
     /**
@@ -67,13 +97,29 @@ class Application extends BaseApplication
         $commands[] = new InfoCommand();
         $commands[] = new BackupCommand();
         $commands[] = new RestoreCommand();
+        $commands[] = new DatabaseCheckCommand();
+        $commands[] = new DatabaseRepairCommand();
+        $commands[] = new DatabaseOptimizeCommand();
+        $commands[] = new DatabaseCleanupCommand();
+        $commands[] = new CacheClearCommand();
+        $commands[] = new CacheRebuildCommand();
         $commands[] = new ExtensionListCommand();
         $commands[] = new InstallCommand();
         $commands[] = new EnableCommand();
         $commands[] = new DisableCommand();
         $commands[] = new ModificationListCommand();
+        $commands[] = new CategoryListCommand();
+        $commands[] = new CategoryCreateCommand();
+        $commands[] = new OrderListCommand();
+        $commands[] = new OrderViewCommand();
+        $commands[] = new OrderUpdateStatusCommand();
         $commands[] = new ProductListCommand();
         $commands[] = new ProductCreateCommand();
+        $commands[] = new ProductUpdateCommand();
+        $commands[] = new ProductDeleteCommand();
+        $commands[] = new UserListCommand();
+        $commands[] = new UserCreateCommand();
+        $commands[] = new UserDeleteCommand();
 
         return $commands;
     }
@@ -99,7 +145,7 @@ class Application extends BaseApplication
      * @param OutputInterface $output
      * @return int
      */
-    public function run(InputInterface $input = null, OutputInterface $output = null): int
+    public function run(?InputInterface $input = null, ?OutputInterface $output = null): int
     {
         // In test environment, ensure we have proper input/output to prevent hanging
         if (getenv('APP_ENV') === 'testing') {
@@ -161,5 +207,73 @@ class Application extends BaseApplication
         }
 
         return null;
+    }
+
+    private static function detectVersion(): string
+    {
+        $envVersion = getenv('OC_CLI_VERSION');
+        if (is_string($envVersion) && trim($envVersion) !== '') {
+            return self::normalizeVersion($envVersion);
+        }
+
+        if (class_exists(__NAMESPACE__ . '\\BuildVersion')) {
+            /** @var class-string $className */
+            $className = __NAMESPACE__ . '\\BuildVersion';
+            if (defined($className . '::VERSION')) {
+                /** @var string $buildVersion */
+                $buildVersion = constant($className . '::VERSION');
+
+                return self::normalizeVersion($buildVersion);
+            }
+        }
+
+        $gitVersion = self::detectVersionFromGit();
+        if ($gitVersion !== null) {
+            return $gitVersion;
+        }
+
+        return self::VERSION;
+    }
+
+    private static function detectVersionFromGit(): ?string
+    {
+        if (!function_exists('exec')) {
+            return null;
+        }
+
+        $projectRoot = dirname(__DIR__);
+        if (!is_dir($projectRoot . '/.git') && !is_file($projectRoot . '/.git')) {
+            return null;
+        }
+
+        $command = 'git -C ' . escapeshellarg($projectRoot)
+            . " describe --tags --match 'v[0-9]*' --dirty --always 2>/dev/null";
+
+        $output = [];
+        $exitCode = 0;
+        exec($command, $output, $exitCode);
+
+        if ($exitCode !== 0 || empty($output[0])) {
+            return null;
+        }
+
+        return self::normalizeVersion((string) $output[0]);
+    }
+
+    private static function normalizeVersion(string $version): string
+    {
+        $version = trim($version);
+
+        if ($version === '') {
+            return self::VERSION;
+        }
+
+        if (preg_match('/^v(?=\d)/', $version) === 1) {
+            $version = substr($version, 1);
+        }
+
+        $version = preg_replace('/[^0-9A-Za-z.+-]/', '', $version);
+
+        return $version !== '' ? $version : self::VERSION;
     }
 }

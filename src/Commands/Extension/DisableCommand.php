@@ -13,6 +13,7 @@
 namespace OpenCart\CLI\Commands\Extension;
 
 use OpenCart\CLI\Command;
+use OpenCart\CLI\Support\ExtensionHelper;
 use Symfony\Component\Console\Input\InputArgument;
 
 class DisableCommand extends Command
@@ -23,11 +24,11 @@ class DisableCommand extends Command
 
         $this
             ->setName('extension:disable')
-            ->setDescription('Disable an extension')
+            ->setDescription('Disable an extension entry from the extension table')
             ->addArgument(
                 'extension',
                 InputArgument::REQUIRED,
-                'Extension code or name to disable'
+                'Extension identifier. Use type:code when multiple entries share a code.'
             );
     }
 
@@ -43,98 +44,42 @@ class DisableCommand extends Command
             return 1;
         }
 
-        $extensionIdentifier = $this->input->getArgument('extension');
-
-        // Find the extension
-        $extension = $this->findExtension($db, $extensionIdentifier);
-        if (!$extension) {
-            $this->io->error("Extension '{$extensionIdentifier}' not found.");
+        $config = $this->getOpenCartConfig();
+        $table = $config['db_prefix'] . 'extension';
+        if (!$this->tableExists($db, $table)) {
+            $this->io->error('The extension table is not available for this OpenCart installation.');
             return 1;
         }
 
-        // Check if already disabled
-        if (!$this->isExtensionEnabled($db, $extension)) {
-            $this->io->warning("Extension '{$extension['name']}' is already disabled.");
-            return 0;
-        }
-
-        $this->io->title('Disabling Extension');
-        $this->io->text("Extension: {$extension['name']} ({$extension['code']})");
-
-        try {
-            if ($this->disableExtension($db, $extension)) {
-                $this->io->success("Extension '{$extension['name']}' disabled successfully.");
-            } else {
-                $this->io->error("Failed to disable extension '{$extension['name']}'.");
-                return 1;
-            }
-        } catch (\Exception $e) {
-            $this->io->error("Disable failed: " . $e->getMessage());
+        $identifier = $this->input->getArgument('extension');
+        $target = ExtensionHelper::resolveTypeAndCode($db, $table, $identifier);
+        if ($target === null || !$this->extensionExists($db, $table, $target['type'], $target['code'])) {
+            $this->io->error("Extension '{$identifier}' is not enabled.");
             return 1;
         }
+
+        $db->query(
+            "DELETE FROM {$table} WHERE type = '" . $db->escape($target['type']) .
+            "' AND code = '" . $db->escape($target['code']) . "'"
+        );
+
+        if ($db->countAffected() < 1) {
+            $this->io->error("Failed to disable extension '{$target['type']}:{$target['code']}'.");
+            return 1;
+        }
+
+        $this->io->success("Extension '{$target['type']}:{$target['code']}' disabled successfully.");
 
         return 0;
     }
 
-    private function findExtension($db, $identifier)
+    private function extensionExists($db, $table, $type, $code)
     {
-        $config = $this->getOpenCartConfig();
-        $prefix = $config['db_prefix'];
-
-        // Search by code or name
-        $sql = "
-            SELECT 
-                ei.extension_install_id,
-                ei.type,
-                ei.code,
-                ei.name,
-                ei.version,
-                ei.author
-            FROM {$prefix}extension_install ei
-            WHERE ei.code = '" . $db->escape($identifier) . "' OR ei.name = '" . $db->escape($identifier) . "'
-            LIMIT 1
-        ";
-
-        $result = $db->query($sql);
-
-        return $result && $result->num_rows ? $result->row : null;
-    }
-
-    private function isExtensionEnabled($db, $extension)
-    {
-        $config = $this->getOpenCartConfig();
-        $prefix = $config['db_prefix'];
-
-        $extensionInstallId = (int)$extension['extension_install_id'];
-        $extensionCode = $db->escape($extension['code']);
-
-        $sql = "
-            SELECT extension_id 
-            FROM {$prefix}extension 
-            WHERE extension_install_id = {$extensionInstallId} AND code = '{$extensionCode}'
-        ";
-
-        $result = $db->query($sql);
+        $result = $db->query(
+            "SELECT extension_id FROM {$table} WHERE type = '" . $db->escape($type) .
+            "' AND code = '" . $db->escape($code) . "' LIMIT 1"
+        );
 
         return $result && $result->num_rows > 0;
-    }
-
-    private function disableExtension($db, $extension)
-    {
-        $config = $this->getOpenCartConfig();
-        $prefix = $config['db_prefix'];
-
-        // Remove from extension table to disable
-        $extensionInstallId = (int)$extension['extension_install_id'];
-        $extensionCode = $db->escape($extension['code']);
-
-        $sql = "
-            DELETE FROM {$prefix}extension 
-            WHERE extension_install_id = {$extensionInstallId} AND code = '{$extensionCode}'
-        ";
-
-        $db->query($sql);
-
-        return $db->countAffected() > 0;
     }
 }

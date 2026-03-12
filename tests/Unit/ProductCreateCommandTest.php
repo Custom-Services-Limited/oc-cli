@@ -128,9 +128,11 @@ class ProductCreateCommandTest extends TestCase
 
         $result = $this->command->run($input, $output);
 
-        // Should fail due to connection, but validates options parsing
         $this->assertEquals(1, $result);
-        $this->assertStringContainsString('Could not connect to database', $output->fetch());
+        $this->assertStringContainsString(
+            'requires a real OpenCart installation root',
+            $output->fetch()
+        );
     }
 
     public function testProductCreateCommandWithAllArguments()

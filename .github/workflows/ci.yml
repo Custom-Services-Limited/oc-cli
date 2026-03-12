@@ -102,6 +102,59 @@ jobs:
     - name: Run static analysis
       run: composer analyze
 
+  e2e:
+    runs-on: ubuntu-latest
+    name: End-to-End
+    permissions:
+      contents: read
+    services:
+      mariadb:
+        image: mariadb:10.11
+        env:
+          MARIADB_DATABASE: opencart_e2e
+          MARIADB_USER: oc_e2e
+          MARIADB_PASSWORD: oc_e2e
+          MARIADB_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mariadb-admin ping -h 127.0.0.1 -uoc_e2e -poc_e2e"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.1'
+        extensions: curl, gd, mbstring, mysqli, openssl, zip, zlib
+        coverage: none
+        tools: composer:v2
+
+    - name: Cache Composer packages
+      id: composer-cache-e2e
+      uses: actions/cache@v4
+      with:
+        path: vendor
+        key: ${{ runner.os }}-php-8.1-e2e-${{ hashFiles('**/composer.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-php-8.1-e2e-
+
+    - name: Install dependencies
+      run: composer install --prefer-dist --no-progress
+
+    - name: Run OpenCart end-to-end verification
+      env:
+        OC_E2E_DB_HOST: 127.0.0.1
+        OC_E2E_DB_NAME: opencart_e2e
+        OC_E2E_DB_USER: oc_e2e
+        OC_E2E_DB_PASS: oc_e2e
+        OC_E2E_DB_PORT: 3306
+      run: composer test:e2e
+
   security:
     runs-on: ubuntu-latest
     name: Security Scan
@@ -128,7 +181,7 @@ jobs:
   build-phar:
     runs-on: ubuntu-latest
     name: Build PHAR
-    needs: [test, code-quality]
+    needs: [test, code-quality, e2e]
     if: github.ref == 'refs/heads/main'
     permissions:
       contents: read
@@ -207,3 +260,32 @@ jobs:
         fi
         
         echo "Documentation structure is valid!"
+
+  pr-merge-gate:
+    runs-on: ubuntu-latest
+    name: PR Merge Gate
+    if: ${{ always() && github.event_name == 'pull_request' }}
+    needs: [test, code-quality, e2e, security, documentation]
+    permissions:
+      contents: read
+
+    steps:
+    - name: Enforce required PR checks
+      env:
+        TEST_RESULT: ${{ needs.test.result }}
+        CODE_QUALITY_RESULT: ${{ needs.code-quality.result }}
+        E2E_RESULT: ${{ needs.e2e.result }}
+        SECURITY_RESULT: ${{ needs.security.result }}
+        DOCUMENTATION_RESULT: ${{ needs.documentation.result }}
+      run: |
+        echo "test=$TEST_RESULT"
+        echo "code-quality=$CODE_QUALITY_RESULT"
+        echo "e2e=$E2E_RESULT"
+        echo "security=$SECURITY_RESULT"
+        echo "documentation=$DOCUMENTATION_RESULT"
+
+        [ "$TEST_RESULT" = "success" ] || exit 1
+        [ "$CODE_QUALITY_RESULT" = "success" ] || exit 1
+        [ "$E2E_RESULT" = "success" ] || exit 1
+        [ "$SECURITY_RESULT" = "success" ] || exit 1
+        [ "$DOCUMENTATION_RESULT" = "success" ] || exit 1

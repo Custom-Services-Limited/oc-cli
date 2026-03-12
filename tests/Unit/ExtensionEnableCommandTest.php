@@ -27,7 +27,10 @@ class ExtensionEnableCommandTest extends TestCase
 
     public function testExtensionEnableCommandDescription()
     {
-        $this->assertEquals('Enable an extension', $this->command->getDescription());
+        $this->assertEquals(
+            'Enable an extension entry in the extension table',
+            $this->command->getDescription()
+        );
     }
 
     public function testExtensionEnableCommandArguments()
@@ -116,7 +119,10 @@ class ExtensionEnableCommandTest extends TestCase
         $extensionArg = $definition->getArgument('extension');
 
         $this->assertTrue($extensionArg->isRequired());
-        $this->assertEquals('Extension code or name to enable', $extensionArg->getDescription());
+        $this->assertEquals(
+            'Extension identifier. Use type:code for disabled extensions.',
+            $extensionArg->getDescription()
+        );
     }
 
     public function testExtensionEnableCommandArgumentValidation()

@@ -1,679 +1,572 @@
 # Commands Reference
 
-This document provides a comprehensive reference for all OC-CLI commands.
+OC-CLI commands use the form:
 
-**OC-CLI is created and maintained by [Custom Services Limited](https://support.opencartgreece.gr/) - Your OpenCart experts.**
-
-## Command Structure
-
-OC-CLI commands follow this general structure:
-```
+```bash
 oc <namespace>:<command> [options] [arguments]
 ```
 
-For example:
+Most commands support:
+
+- `--opencart-root=/path/to/store`
+- direct DB flags: `--db-host`, `--db-user`, `--db-pass`, `--db-name`, `--db-port`, `--db-prefix`, `--db-driver`
+- `--format=table|json|yaml` on commands that emit structured output
+
+Runtime-backed commands bootstrap OpenCart 3.x models and require a real OpenCart 3.x installation root. DB-native commands such as `db:info`, `db:backup`, `db:restore`, `db:check`, `db:repair`, `db:optimize`, and `db:cleanup` can run with direct DB credentials alone.
+
+## Supported commands
+
+### `core:version`
+
+Show OC-CLI and OpenCart version information.
+
 ```bash
-oc product:list --limit=10 --format=json
-```
-
-## Global Options
-
-Most commands support these global options:
-
-- `--opencart-root=<path>` - Path to OpenCart installation directory (allows running commands from anywhere)
-- `--format=<format>` - Output format: `table` (default), `json`, `yaml`
-- `--quiet` - Suppress output
-- `--verbose` - Increase verbosity
-- `--help` - Show help for the command
-
-## Database Connection Options
-
-When OpenCart installation is not available, you can connect directly to the database:
-
-- `--db-host=<hostname>` - Database hostname (default: localhost)
-- `--db-user=<username>` - Database username
-- `--db-pass=<password>` - Database password
-- `--db-name=<database>` - Database name
-- `--db-port=<port>` - Database port (default: 3306)
-- `--db-prefix=<prefix>` - Database table prefix (default: oc_)
-
-**Example:**
-```bash
-oc product:list --db-host=localhost --db-user=oc_user --db-pass=password --db-name=opencart_db
-```
-
-## Core Commands
-
-### core:version
-Display version information for OC-CLI and OpenCart.
-
-**Usage:**
-```bash
-oc core:version [options]
-```
-
-**Options:**
-- `--opencart-root=<path>` - Path to OpenCart installation directory
-- `--opencart, -o` - Show only OpenCart version
-- `--format=<format>` - Output format (table, json, yaml)
-
-**Examples:**
-```bash
-# Show all version information
 oc core:version
-
-# Show only OpenCart version
 oc core:version --opencart
-
-# JSON output
 oc core:version --format=json
-
-# Check version from different directory
-oc core:version --opencart-root=/var/www/opencart
-
-# Show only OpenCart version from specific path
-oc core:version --opencart --opencart-root=/path/to/opencart
 ```
 
-### core:check-requirements
-Check system requirements for OpenCart and OC-CLI.
+Options:
 
-**Usage:**
+- `--opencart`
+- `--format`
+
+### `core:check-requirements`
+
+Check the local runtime and OpenCart installation requirements.
+
 ```bash
-oc core:check-requirements [options]
-```
-
-**Options:**
-- `--opencart-root=<path>` - Path to OpenCart installation directory
-- `--format=<format>` - Output format (table, json, yaml)
-
-**Examples:**
-```bash
-# Check requirements (basic)
 oc core:check-requirements
-
-# Check requirements with JSON output
-oc core:check-requirements --format=json
-
-# Check requirements for specific OpenCart installation
-oc core:check-requirements --opencart-root=/var/www/opencart
-
-# YAML output for automation scripts
-oc core:check-requirements --format=yaml --opencart-root=/path/to/oc
+oc core:check-requirements --format=yaml
 ```
 
-**What it checks:**
-- PHP version (>= 7.4) and configuration (memory limit, execution time)
-- Required PHP extensions (curl, gd, mbstring, zip, zlib, json, openssl)
-- Recommended PHP extensions (mysqli, pdo_mysql, iconv, mcrypt)
-- OpenCart directory and file permissions
-- Database connectivity (if OpenCart installation found)
+Options:
 
-### core:config
-Manage OpenCart configuration settings stored in the database.
+- `--format`
 
-**Usage:**
+### `core:config`
+
+Read and update configuration values stored in the shared OpenCart settings table.
+
 ```bash
-oc core:config [action] [key] [value] [options]
-```
-
-**Actions:**
-- `list` - List all configuration settings (default)
-- `get` - Get specific configuration value
-- `set` - Set configuration value
-
-**Options:**
-- `--opencart-root=<path>` - Path to OpenCart installation directory
-- `--format=<format>` - Output format (table, json, yaml)
-- `--admin, -a` - Use admin configuration instead of catalog
-
-**Examples:**
-```bash
-# List all catalog configuration
 oc core:config list
-
-# List all configuration in JSON format
-oc core:config list --format=json
-
-# List admin configuration
-oc core:config list --admin
-
-# Get a specific configuration value
 oc core:config get config_name
-
-# Set a configuration value
-oc core:config set config_name "new value"
-
-# Work with specific OpenCart installation
-oc core:config list --opencart-root=/var/www/opencart
-
-# Set admin configuration from different directory
-oc core:config set config_admin_setting "value" --admin --opencart-root=/path/to/oc
-
-# Get configuration in YAML format for scripts
-oc core:config get config_currency --format=yaml --opencart-root=/var/www/store
+oc core:config set config_maintenance 1
+oc core:config list --format=json
 ```
 
-**Important Notes:**
-- This command requires a valid OpenCart installation with database access
-- Configuration changes are written directly to the database
-- Use `--admin` flag to work with admin panel settings instead of catalog settings
-- Some configuration changes may require cache clearing to take effect
-- Be careful when setting configuration values - invalid values may break your store
+Arguments:
 
-**Common Configuration Keys:**
-- `config_name` - Store name
-- `config_owner` - Store owner
-- `config_address` - Store address
-- `config_email` - Store email
-- `config_telephone` - Store telephone
-- `config_currency` - Default currency
-- `config_language` - Default language
-- `config_admin_language` - Admin language (use with --admin)
+- `action` with `list` as the default
+- `key`
+- `value`
 
-## Database Commands
+Options:
 
-### db:info
-Display database connection information.
+- `--format`
+- `--admin`
 
-**Usage:**
+Notes:
+
+- `--admin` is deprecated and has no effect.
+- This command operates on shared settings rows, not separate catalog/admin scopes.
+
+### `db:info`
+
+Show the resolved database connection details.
+
 ```bash
 oc db:info
+oc db:info --format=json
 ```
 
-### db:backup
-Create a database backup.
+Options:
 
-**Usage:**
+- `--format`
+
+### `db:backup`
+
+Create a SQL backup.
+
 ```bash
-oc db:backup [filename] [options]
-```
-
-**Options:**
-- `--compress` - Compress the backup using gzip
-- `--tables=<tables>` - Backup specific tables only
-
-**Examples:**
-```bash
-# Create backup with auto-generated filename
 oc db:backup
-
-# Create backup with specific filename
-oc db:backup my-backup.sql
-
-# Compressed backup
-oc db:backup --compress
+oc db:backup nightly.sql
+oc db:backup nightly.sql --compress
+oc db:backup products.sql --tables=oc_product,oc_product_description
 ```
 
-### db:restore
-Restore database from backup.
+Arguments:
 
-**Usage:**
+- `filename` optional
+
+Options:
+
+- `--compress`
+- `--tables`
+- `--output-dir`
+
+### `db:restore`
+
+Restore a SQL backup.
+
 ```bash
-oc db:restore <filename> [options]
+oc db:restore nightly.sql
+oc db:restore nightly.sql --force
+oc db:restore nightly.sql --ignore-errors
 ```
 
-**Options:**
-- `--force` - Skip confirmation prompt
+Arguments:
 
-**Examples:**
+- `filename` required
+
+Options:
+
+- `--force`
+- `--ignore-errors`
+
+### `db:check`
+
+Run table checks against specific tables or all OpenCart tables.
+
 ```bash
-# Restore from backup
-oc db:restore backup.sql
-
-# Force restore without confirmation
-oc db:restore backup.sql --force
+oc db:check
+oc db:check product order
+oc db:check oc_product oc_order --format=json
 ```
 
-## Product Commands
+Arguments:
 
-### product:list
-List products in the store with powerful filtering and search capabilities.
+- `tables...` optional list of table names, with or without the configured prefix
 
-**Usage:**
+Options:
+
+- `--format`
+
+### `db:repair`
+
+Run table repair against specific tables or all OpenCart tables.
+
 ```bash
-oc product:list [category] [options]
+oc db:repair
+oc db:repair oc_product_description
 ```
 
-**Arguments:**
-- `category` - Filter by category name or ID (optional)
+Arguments:
 
-**Options:**
-- `--format=<format>` - Output format: `table` (default), `json`, `yaml`
-- `--status=<status>` - Filter by status: `enabled`, `disabled`, `all` (default: all)
-- `--limit=<number>` - Limit number of results (default: 50)
-- `--search=<term>` - Search by product name or model
+- `tables...` optional list of table names, with or without the configured prefix
 
-**Examples:**
+Options:
+
+- `--format`
+
+### `db:optimize`
+
+Run table optimization against specific tables or all OpenCart tables.
+
 ```bash
-# List all products (default table format)
-oc product:list
-
-# List first 10 products
-oc product:list --limit=10
-
-# List only enabled products
-oc product:list --status=enabled
-
-# Search for products containing "iPhone"
-oc product:list --search="iPhone"
-
-# List products in "Electronics" category
-oc product:list Electronics
-
-# List products in category ID 20
-oc product:list 20
-
-# Combine filters - enabled products in Desktops category, limit 5
-oc product:list Desktops --status=enabled --limit=5
-
-# JSON output for scripting
-oc product:list --format=json --limit=3
-
-# Using database connection directly
-oc product:list --db-host=localhost --db-user=oc_user --db-pass=password --db-name=oc_db
-
-# Search with database connection and YAML output
-oc product:list --search="Samsung" --format=yaml --db-host=localhost --db-user=oc_user --db-pass=pass --db-name=opencart
+oc db:optimize
+oc db:optimize product product_description order
 ```
 
-**Sample Output (Table):**
-```
-Products
-========
+Arguments:
 
- ---- -------------------------- ------------ ----------- ----------- ------------------------- ------ ------------ 
-  ID   Name                       Model        Price       Status      Category                  Qty    Date Added  
- ---- -------------------------- ------------ ----------- ----------- ------------------------- ------ ------------ 
-  49   Samsung Galaxy Tab 10.1    SAM1         $199.99     ✓ Enabled   Tablets                   0      2011-04-26  
-  48   iPod Classic               product 20   $100.00     ✓ Enabled   MP3 Players               995    2009-02-08  
-  47   HP LP3065                  Product 21   $100.00     ✓ Enabled   Monitors                  1000   2009-02-03  
- ---- -------------------------- ------------ ----------- ----------- ------------------------- ------ ------------ 
-```
+- `tables...` optional list of table names, with or without the configured prefix
 
-### product:create
-Create a new product with comprehensive options and validation.
+Options:
 
-**Usage:**
+- `--format`
+
+### `db:cleanup`
+
+Delete only transient rows from `*_session`, `*_api_session`, and `*_customer_online`.
+
 ```bash
-oc product:create [name] [model] [price] [options]
+oc db:cleanup
+oc db:cleanup --format=json
 ```
 
-**Arguments:**
-- `name` - Product name (optional, will prompt if not provided)
-- `model` - Product model/SKU (optional, will prompt if not provided)
-- `price` - Product price (optional, will prompt if not provided)
+Options:
 
-**Options:**
-- `--description=<text>` - Product description
-- `--category=<name|id>` - Category name or ID to assign product to
-- `--quantity=<number>` - Stock quantity (default: 0)
-- `--status=<status>` - Product status: `enabled` or `disabled` (default: enabled)
-- `--weight=<number>` - Product weight (default: 0)
-- `--sku=<sku>` - Product SKU (defaults to model if not provided)
-- `--format=<format>` - Output format: `table` (default), `json`, `yaml`
-- `--interactive` - Interactive mode - prompt for missing values
+- `--format`
 
-**Examples:**
+### `cache:clear`
+
+Clear OpenCart cache artifacts. Requires a real OpenCart 3.x installation root.
+
 ```bash
-# Basic product creation
-oc product:create "Test Product" "TEST-001" "29.99"
-
-# Create product with full details
-oc product:create "Advanced Widget" "ADV-001" "149.99" \
-  --description="High-quality advanced widget" \
-  --category="Electronics" \
-  --quantity=50 \
-  --status=enabled \
-  --weight=2.5 \
-  --sku="ADV-WIDGET-001"
-
-# Interactive mode (prompts for required fields)
-oc product:create --interactive
-
-# Create product with JSON output
-oc product:create "API Product" "API-001" "99.99" --format=json
-
-# Create product using database connection
-oc product:create "Remote Product" "REM-001" "199.99" \
-  --description="Created via remote connection" \
-  --category="Desktops" \
-  --db-host=localhost \
-  --db-user=oc_user \
-  --db-pass=password \
-  --db-name=opencart_db
-
-# Create disabled product
-oc product:create "Draft Product" "DRAFT-001" "0.00" --status=disabled
-
-# Create product in specific category by ID
-oc product:create "Category Test" "CAT-001" "25.00" --category=20
+oc cache:clear
+oc cache:clear --type=data
+oc cache:clear --type=theme
+oc cache:clear --type=all
 ```
 
-**Sample Output (Table):**
-```
-[OK] Product created successfully!
+Options:
 
- ------------ -------------------- 
-  Field        Value               
- ------------ -------------------- 
-  Product ID   51                  
-  Name         Test Product        
-  Model        TEST-001            
-  Price        $29.99              
-  Status       Enabled             
-  Quantity     0                   
-  Weight       0                   
- ------------ -------------------- 
-```
+- `--type=data|theme|sass|all`
 
-**Sample Output (JSON):**
-```json
-{
-    "product_id": 52,
-    "name": "API Product",
-    "model": "API-001",
-    "price": "99.99",
-    "status": "enabled",
-    "quantity": 0,
-    "weight": 0
-}
-```
+### `cache:rebuild`
 
-**Database Fields Created:**
-- `oc_product` table: Core product information
-- `oc_product_description` table: Product name, description, and SEO fields
-- `oc_product_to_category` table: Category assignment (if specified)
+Refresh the modification cache and optionally clear data, theme, and Sass cache artifacts. Requires a real OpenCart 3.x installation root.
 
-**Validation:**
-- Checks for duplicate model numbers
-- Validates price format (must be numeric and positive)
-- Validates status values (enabled/disabled only)
-- Ensures required fields are provided (name, model, price)
-
-**Interactive Mode:**
-When using `--interactive`, the command will prompt for:
-1. Product name (required)
-2. Product model/SKU (required)
-3. Product price (required)
-4. Product description (optional)
-5. Category assignment (optional)
-
-### product:update
-Update an existing product.
-
-**Usage:**
-```bash
-oc product:update <product_id> [options]
-```
-
-**Options:**
-- `--name=<name>` - Product name
-- `--model=<model>` - Product model
-- `--price=<price>` - Product price
-- `--description=<description>` - Product description
-- `--status=<status>` - Product status
-
-**Examples:**
-```bash
-# Update product name
-oc product:update 1 --name="Updated Product Name"
-
-# Update multiple fields
-oc product:update 1 --name="New Name" --price=39.99
-```
-
-### product:delete
-Delete a product.
-
-**Usage:**
-```bash
-oc product:delete <product_id> [options]
-```
-
-**Options:**
-- `--force` - Skip confirmation prompt
-
-**Examples:**
-```bash
-# Delete product with confirmation
-oc product:delete 1
-
-# Force delete without confirmation
-oc product:delete 1 --force
-```
-
-## Category Commands
-
-### category:list
-List product categories.
-
-**Usage:**
-```bash
-oc category:list [options]
-```
-
-**Options:**
-- `--parent=<id>` - Show categories under specific parent
-- `--level=<number>` - Show categories at specific level
-
-### category:create
-Create a new category.
-
-**Usage:**
-```bash
-oc category:create [options]
-```
-
-**Options:**
-- `--name=<name>` - Category name (required)
-- `--parent=<id>` - Parent category ID
-- `--description=<description>` - Category description
-
-## Order Commands
-
-### order:list
-List orders in the store.
-
-**Usage:**
-```bash
-oc order:list [options]
-```
-
-**Options:**
-- `--status=<status>` - Filter by order status
-- `--limit=<number>` - Limit number of results
-- `--customer=<customer_id>` - Filter by customer
-
-### order:view
-View detailed information about an order.
-
-**Usage:**
-```bash
-oc order:view <order_id>
-```
-
-### order:update-status
-Update order status.
-
-**Usage:**
-```bash
-oc order:update-status <order_id> <status_id> [options]
-```
-
-**Options:**
-- `--comment=<comment>` - Add comment to status update
-- `--notify` - Notify customer of status change
-
-## Extension Commands
-
-### extension:list
-List installed extensions.
-
-**Usage:**
-```bash
-oc extension:list [type]
-```
-
-**Arguments:**
-- `type` - Extension type (module, payment, shipping, etc.)
-
-### extension:install
-Install an extension.
-
-**Usage:**
-```bash
-oc extension:install <extension> [options]
-```
-
-**Options:**
-- `--activate` - Activate after installation
-
-### extension:enable
-Enable an extension.
-
-**Usage:**
-```bash
-oc extension:enable <extension>
-```
-
-### extension:disable
-Disable an extension.
-
-**Usage:**
-```bash
-oc extension:disable <extension>
-```
-
-## Cache Commands
-
-### cache:clear
-Clear OpenCart caches.
-
-**Usage:**
-```bash
-oc cache:clear [type]
-```
-
-**Arguments:**
-- `type` - Cache type to clear (image, modification, etc.)
-
-### cache:rebuild
-Rebuild OpenCart caches.
-
-**Usage:**
 ```bash
 oc cache:rebuild
+oc cache:rebuild --type=modification
+oc cache:rebuild --type=all
 ```
 
-## User Commands
+Options:
 
-### user:list
-List admin users.
+- `--type=modification|all`
 
-**Usage:**
+### `extension:list`
+
+List enabled rows from the OpenCart extension table.
+
 ```bash
-oc user:list
+oc extension:list
+oc extension:list payment
+oc extension:list --format=json
 ```
 
-### user:create
-Create a new admin user.
+Arguments:
 
-**Usage:**
+- `type` optional, for example `payment`, `shipping`, or `module`
+
+Options:
+
+- `--format`
+
+### `extension:install`
+
+Import an OCMOD XML package into the modification table.
+
 ```bash
-oc user:create [options]
+oc extension:install ./example.ocmod.xml
+oc extension:install ./example.ocmod.xml --activate
 ```
 
-**Options:**
-- `--username=<username>` - Username (required)
-- `--password=<password>` - Password (required)
-- `--email=<email>` - Email address (required)
-- `--firstname=<name>` - First name
-- `--lastname=<name>` - Last name
+Arguments:
 
-### user:delete
-Delete an admin user.
+- `extension` required path to `.xml` or `.ocmod`
 
-**Usage:**
+Options:
+
+- `--activate`
+
+Notes:
+
+- This is not a generic marketplace installer.
+- Unsupported package/version combinations fail explicitly.
+
+### `extension:enable`
+
+Insert an enabled extension row.
+
 ```bash
-oc user:delete <user_id> [options]
+oc extension:enable payment:paypal
+oc extension:enable shipping:flat
 ```
 
-**Options:**
-- `--force` - Skip confirmation prompt
+Arguments:
 
-## Output Formats
+- `extension` required
 
-### Table Format (Default)
+Notes:
+
+- Use `type:code` when enabling a disabled extension that is not already present.
+
+### `extension:disable`
+
+Delete an enabled extension row.
+
+```bash
+oc extension:disable payment:paypal
+oc extension:disable paypal
+```
+
+Arguments:
+
+- `extension` required
+
+Notes:
+
+- Use `type:code` when multiple rows share the same code.
+
+### `modification:list`
+
+List installed modifications.
+
+```bash
+oc modification:list
+oc modification:list --format=yaml
+```
+
+Options:
+
+- `--format`
+
+### `category:list`
+
+List categories using the OpenCart admin category model. Requires a real OpenCart 3.x installation root.
+
+```bash
+oc category:list
+oc category:list --name=Desktops
+oc category:list --sort=name --order=desc --format=json
+```
+
+Options:
+
+- `--name`
+- `--sort=name|sort_order`
+- `--order=asc|desc`
+- `--page`
+- `--limit`
+- `--format`
+
+### `category:create`
+
+Create a category using the OpenCart admin category model. Requires a real OpenCart 3.x installation root.
+
+```bash
+oc category:create "CLI Specials"
+oc category:create "Laptops / CLI" --parent-id=20 --description="Created from OC-CLI"
+oc category:create "CLI Accessories" --store=0,1 --keyword=cli-accessories --status=enabled
+```
+
+Arguments:
+
+- `name`
+
+Options:
+
+- `--parent-id`
+- `--description`
+- `--meta-title`
+- `--status=enabled|disabled`
+- `--sort-order`
+- `--top`
+- `--column`
+- `--store`
+- `--keyword`
+- `--image`
+
+### `product:list`
+
+List products with filtering. Requires a real OpenCart 3.x installation root.
+
 ```bash
 oc product:list
-+----+-------------+-------+-------+
-| ID | Name        | Model | Price |
-+----+-------------+-------+-------+
-| 1  | Product One | P001  | 29.99 |
-| 2  | Product Two | P002  | 39.99 |
-+----+-------------+-------+-------+
+oc product:list --status=enabled --limit=10
+oc product:list Desktops --search=Mac
+oc product:list 20 --format=json
 ```
 
-### JSON Format
+Arguments:
+
+- `category` optional category name or ID
+
+Options:
+
+- `--format`
+- `--status=enabled|disabled|all`
+- `--limit`
+- `--search`
+
+### `product:create`
+
+Create a product using positional arguments and optional metadata flags. Requires a real OpenCart 3.x installation root.
+
 ```bash
-oc product:list --format=json
-[
-  {
-    "id": 1,
-    "name": "Product One",
-    "model": "P001",
-    "price": "29.99"
-  }
-]
+oc product:create "Demo Product" "DEMO-001" "19.99"
+oc product:create "Demo Product" "DEMO-001" "19.99" --quantity=5 --status=enabled
+oc product:create "Demo Product" "DEMO-001" "19.99" --category=Desktops --format=json
+oc product:create --interactive
 ```
 
-### YAML Format
+Arguments:
+
+- `name`
+- `model`
+- `price`
+
+Options:
+
+- `--description`
+- `--category`
+- `--quantity`
+- `--status`
+- `--weight`
+- `--sku`
+- `--image`
+- `--meta-title`
+- `--format`
+- `--interactive`
+
+### `product:update`
+
+Update an existing product by loading the current OpenCart product payload, overlaying supported fields, and writing it back through the admin product model. Requires a real OpenCart 3.x installation root.
+
 ```bash
-oc product:list --format=yaml
-- id: 1
-  name: "Product One"
-  model: "P001"
-  price: "29.99"
+oc product:update 100 --price=24.99 --quantity=5
+oc product:update 100 --name="Updated CLI Product" --description="Updated from the CLI"
+oc product:update 100 --category=20,24 --status=enabled --image=catalog/demo/updated.jpg
 ```
 
-## Database Schema Reference
+Arguments:
 
-For detailed information about the OpenCart database structure used by these commands, see:
-- **[Database Schema Documentation](database-schema.md)** - Comprehensive reference for all product-related tables
-- **[OpenCart 2.x / 3.x Structure](../tests/oc2x_and_3x_db_structure.sql)** - Complete database schema SQL file
+- `product-id`
 
-## Error Handling
+Options:
 
-### Common Errors and Solutions
+- `--name`
+- `--model`
+- `--price`
+- `--quantity`
+- `--status=enabled|disabled`
+- `--sku`
+- `--category`
+- `--image`
+- `--subtract=0|1`
+- `--manufacturer-id`
+- `--description`
+- `--meta-title`
 
-**Database Connection Failed:**
+### `product:delete`
+
+Delete a product through the OpenCart admin product model. Requires a real OpenCart 3.x installation root.
+
 ```bash
-[ERROR] Could not connect to database.
+oc product:delete 100
+oc product:delete 100 --force
 ```
-- Verify database credentials and connectivity
-- Check that OpenCart installation exists or provide `--db-*` options
-- Ensure MySQL service is running
 
-**Product Model Already Exists:**
-```bash
-[ERROR] Product with model 'TEST-001' already exists.
-```
-- Use a unique model number
-- Check existing products with `oc product:list --search="TEST-001"`
+Arguments:
 
-**Invalid OpenCart Installation:**
-```bash
-[ERROR] This command must be run from an OpenCart installation directory or provide database connection options.
-```
-- Navigate to OpenCart root directory, or
-- Use `--opencart-root=/path/to/opencart`, or
-- Use direct database connection with `--db-host`, `--db-user`, etc.
+- `product-id`
 
-**Permission Denied:**
+Options:
+
+- `--force`
+
+### `order:list`
+
+List orders using the OpenCart admin order model. Requires a real OpenCart 3.x installation root.
+
 ```bash
-[ERROR] Permission denied accessing OpenCart files.
+oc order:list
+oc order:list --customer=John --status-id=2 --limit=10
+oc order:list --date-added=2026-03-01 --sort=total --order=desc --format=json
 ```
-- Check file/directory permissions
-- Run with appropriate user permissions
-- Verify OpenCart directory ownership
+
+Options:
+
+- `--id`
+- `--customer`
+- `--status-id`
+- `--date-added`
+- `--date-modified`
+- `--total`
+- `--sort=order_id|customer|order_status|date_added|date_modified|total`
+- `--order=asc|desc`
+- `--page`
+- `--limit`
+- `--format`
+
+### `order:view`
+
+Show one order, including products, totals, and recent history. Requires a real OpenCart 3.x installation root.
+
+```bash
+oc order:view 1
+oc order:view 1 --format=json
+```
+
+Arguments:
+
+- `order-id`
+
+Options:
+
+- `--format`
+
+### `order:update-status`
+
+Add order history and update an order status through the OpenCart checkout order model. Requires a real OpenCart 3.x installation root.
+
+```bash
+oc order:update-status 1 Processing
+oc order:update-status 1 5 --comment="Approved from OC-CLI" --notify
+oc order:update-status 1 Complete --comment="Released" --override
+```
+
+Arguments:
+
+- `order-id`
+- `status` as an integer ID or exact current-language order status name
+
+Options:
+
+- `--comment`
+- `--notify`
+- `--override`
+
+### `user:list`
+
+List admin users from the OpenCart admin user model. Requires a real OpenCart 3.x installation root.
+
+```bash
+oc user:list
+oc user:list --status=enabled
+oc user:list --group=1 --sort=date_added --order=desc --format=json
+```
+
+Options:
+
+- `--group`
+- `--status=enabled|disabled|all`
+- `--sort=username|status|date_added`
+- `--order=asc|desc`
+- `--page`
+- `--limit`
+- `--format`
+
+### `user:create`
+
+Create an admin user through the OpenCart admin user model. Requires a real OpenCart 3.x installation root.
+
+```bash
+oc user:create cli-admin cli-admin@example.com 'StrongPass!123' --firstname=CLI --lastname=Admin
+oc user:create merch-admin merch@example.com 'AnotherPass!123' --firstname=Merch --lastname=Team --group-id=1 --status=enabled
+```
+
+Arguments:
+
+- `username`
+- `email`
+- `password`
+
+Options:
+
+- `--firstname`
+- `--lastname`
+- `--group-id`
+- `--status=enabled|disabled`
+- `--image`
+
+### `user:delete`
+
+Delete an admin user. The command protects the last enabled administrator-equivalent user unless `--force` is passed. Requires a real OpenCart 3.x installation root.
+
+```bash
+oc user:delete cli-admin
+oc user:delete 7 --force
+```
+
+Arguments:
+
+- `user` as a numeric user ID or exact username
+
+Options:
+
+- `--force`

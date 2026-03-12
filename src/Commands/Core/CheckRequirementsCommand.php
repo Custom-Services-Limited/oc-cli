@@ -97,18 +97,21 @@ class CheckRequirementsCommand extends Command
             'name' => 'PHP Version >= 7.4',
             'status' => version_compare(PHP_VERSION, '7.4.0', '>='),
             'message' => 'Current: ' . PHP_VERSION,
+            'required' => true,
         ];
 
         $checks[] = [
             'name' => 'Memory Limit >= 128M',
             'status' => $this->checkMemoryLimit(),
             'message' => 'Current: ' . ini_get('memory_limit'),
+            'required' => true,
         ];
 
         $checks[] = [
             'name' => 'Max Execution Time >= 30s',
             'status' => $this->checkExecutionTime(),
             'message' => 'Current: ' . ini_get('max_execution_time') . 's',
+            'required' => true,
         ];
 
         return $checks;
@@ -131,6 +134,7 @@ class CheckRequirementsCommand extends Command
                 'name' => 'Extension: ' . $ext . ' (required)',
                 'status' => extension_loaded($ext),
                 'message' => extension_loaded($ext) ? 'Loaded' : 'Missing',
+                'required' => true,
             ];
         }
 
@@ -139,6 +143,7 @@ class CheckRequirementsCommand extends Command
                 'name' => 'Extension: ' . $ext . ' (recommended)',
                 'status' => extension_loaded($ext),
                 'message' => extension_loaded($ext) ? 'Loaded' : 'Missing',
+                'required' => false,
             ];
         }
 
@@ -159,6 +164,7 @@ class CheckRequirementsCommand extends Command
                 'name' => 'OpenCart Installation',
                 'status' => false,
                 'message' => 'No OpenCart installation detected',
+                'required' => true,
             ];
             return $checks;
         }
@@ -183,6 +189,7 @@ class CheckRequirementsCommand extends Command
                 'name' => 'Directory writable: ' . $dir,
                 'status' => $isWritable,
                 'message' => $isWritable ? 'Writable' : (is_dir($fullPath) ? 'Not writable' : 'Does not exist'),
+                'required' => true,
             ];
         }
 
@@ -199,6 +206,7 @@ class CheckRequirementsCommand extends Command
                 'name' => 'File writable: ' . $file,
                 'status' => $isWritable,
                 'message' => $isWritable ? 'Writable' : (file_exists($fullPath) ? 'Not writable' : 'Does not exist'),
+                'required' => true,
             ];
         }
 
@@ -219,6 +227,7 @@ class CheckRequirementsCommand extends Command
                 'name' => 'Database Connection',
                 'status' => false,
                 'message' => 'No OpenCart installation to test',
+                'required' => true,
             ];
             return $checks;
         }
@@ -229,6 +238,7 @@ class CheckRequirementsCommand extends Command
             'name' => 'Database Connection',
             'status' => $db !== null,
             'message' => $db ? 'Connected' : 'Failed to connect',
+            'required' => true,
         ];
 
         if ($db) {
@@ -247,6 +257,7 @@ class CheckRequirementsCommand extends Command
                 'name' => 'MySQL Version >= 5.6',
                 'status' => $numericVersion >= 50600,
                 'message' => 'Current: ' . $versionString,
+                'required' => true,
             ];
         }
 
@@ -323,6 +334,9 @@ class CheckRequirementsCommand extends Command
         foreach ($requirements as $category) {
             foreach ($category as $check) {
                 if (!$check['status']) {
+                    if (array_key_exists('required', $check) && !$check['required']) {
+                        continue;
+                    }
                     return true;
                 }
             }

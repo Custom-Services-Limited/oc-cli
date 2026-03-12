@@ -1,6 +1,5 @@
 # Dependencies
 /vendor/
-composer.lock
 
 # IDE files
 .idea/
@@ -16,6 +15,7 @@ Thumbs.db
 # Build artifacts
 /build/
 oc-cli.phar
+src/BuildVersion.php
 
 # Test artifacts
 /coverage/
