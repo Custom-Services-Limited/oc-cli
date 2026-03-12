@@ -208,7 +208,7 @@ class ConfigCommandTest extends TestCase
         // Should have proper description
         $description = $adminOption->getDescription();
         $this->assertStringContainsString('admin', strtolower($description));
-        $this->assertStringContainsString('catalog', strtolower($description));
+        $this->assertStringContainsString('deprecated', strtolower($description));
     }
 
     public function testValidActionsRecognized()

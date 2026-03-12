@@ -55,7 +55,7 @@ class ConfigCommand extends Command
                 'admin',
                 'a',
                 InputOption::VALUE_NONE,
-                'Use admin configuration instead of catalog'
+                'Deprecated admin flag: OpenCart stores settings in a shared table, so this has no effect'
             );
     }
 
@@ -71,6 +71,12 @@ class ConfigCommand extends Command
         $value = $this->input->getArgument('value');
         $format = $this->input->getOption('format');
         $isAdmin = $this->input->getOption('admin');
+
+        if ($isAdmin) {
+            $this->io->warning(
+                'The --admin flag is deprecated and has no effect because OpenCart stores configuration in shared rows.'
+            );
+        }
 
         // Validate arguments before checking OpenCart
         if ($action === 'get' && !$key) {
@@ -178,7 +184,7 @@ class ConfigCommand extends Command
         $prefix = $config['db_prefix'];
         $table = $prefix . 'setting';
 
-        $group = $isAdmin ? 'config' : 'config';
+        $group = 'config';
         $store_id = 0;
 
         $valueEscaped = $db->escape((string)$value);
@@ -288,8 +294,7 @@ class ConfigCommand extends Command
      */
     protected function displayConfigTable($config, $isAdmin)
     {
-        $title = $isAdmin ? 'Admin Configuration' : 'Catalog Configuration';
-        $this->io->title($title);
+        $this->io->title('Configuration');
 
         if (empty($config)) {
             $this->io->warning('No configuration found');

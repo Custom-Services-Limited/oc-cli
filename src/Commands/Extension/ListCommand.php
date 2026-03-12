@@ -24,7 +24,7 @@ class ListCommand extends Command
 
         $this
             ->setName('extension:list')
-            ->setDescription('List installed extensions')
+            ->setDescription('List enabled extensions')
             ->addArgument(
                 'type',
                 InputArgument::OPTIONAL,
@@ -52,7 +52,12 @@ class ListCommand extends Command
         }
 
         $type = $this->input->getArgument('type');
-        $extensions = $this->getExtensions($db, $type);
+        try {
+            $extensions = $this->getExtensions($db, $type);
+        } catch (\Exception $e) {
+            $this->io->error($e->getMessage());
+            return 1;
+        }
 
         if (empty($extensions)) {
             $message = $type
@@ -70,13 +75,18 @@ class ListCommand extends Command
     {
         $config = $this->getOpenCartConfig();
         $prefix = $config['db_prefix'];
+        $table = $prefix . 'extension';
+
+        if (!$this->tableExists($db, $table)) {
+            throw new \RuntimeException('The extension table is not available for this OpenCart installation.');
+        }
 
         $sql = "
             SELECT 
                 e.type,
                 e.code,
-                'enabled' as status
-            FROM {$prefix}extension e
+                'enabled' AS status
+            FROM {$table} e
         ";
 
         if ($type) {

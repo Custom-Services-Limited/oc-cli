@@ -13,6 +13,7 @@
 namespace OpenCart\CLI\Commands\Product;
 
 use OpenCart\CLI\Command;
+use OpenCart\CLI\Support\LanguageHelper;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Question\Question;
@@ -146,9 +147,9 @@ class CreateCommand extends Command
             'description' => $this->input->getOption('description') ?: '',
             'category' => $this->input->getOption('category'),
             'quantity' => (int)$this->input->getOption('quantity'),
-            'status' => $this->input->getOption('status'),
+            'status' => $this->normaliseStatus($this->input->getOption('status')),
             'weight' => (float)$this->input->getOption('weight'),
-            'sku' => $this->input->getOption('sku') ?: ''
+            'sku' => $this->input->getOption('sku') ?: ($this->input->getArgument('model') ?: '')
         ];
 
         // Interactive mode or missing required fields
@@ -211,12 +212,12 @@ class CreateCommand extends Command
 
     private function validateProductData($data)
     {
-        if (empty($data['name'])) {
+        if (empty(trim((string) ($data['name'] ?? '')))) {
             $this->io->error('Product name is required.');
             return false;
         }
 
-        if (empty($data['model'])) {
+        if (empty(trim((string) ($data['model'] ?? '')))) {
             $this->io->error('Product model is required.');
             return false;
         }
@@ -226,7 +227,7 @@ class CreateCommand extends Command
             return false;
         }
 
-        if (!in_array($data['status'], ['enabled', 'disabled'])) {
+        if (!in_array($data['status'], ['enabled', 'disabled'], true)) {
             $this->io->error('Status must be either "enabled" or "disabled".');
             return false;
         }
@@ -252,6 +253,7 @@ class CreateCommand extends Command
 
         try {
             $db->query('START TRANSACTION');
+            $languageId = LanguageHelper::getDefaultLanguageId($db, $config);
 
             // Insert into oc_product
             $status = $data['status'] === 'enabled' ? 1 : 0;
@@ -327,7 +329,7 @@ INSERT INTO {$prefix}product_description (
     meta_keyword
 ) VALUES (
     {$productIdInt},
-    1,
+    {$languageId},
     '{$name}',
     '{$description}',
     '',
@@ -338,6 +340,13 @@ INSERT INTO {$prefix}product_description (
 SQL;
 
             $db->query($productDescriptionInsert);
+
+            if ($this->tableExists($db, $prefix . 'product_to_store')) {
+                $db->query(
+                    "INSERT INTO {$prefix}product_to_store (product_id, store_id) VALUES (" .
+                    $productIdInt . ', 0)'
+                );
+            }
 
             // Insert into oc_product_to_category if category is specified
             if (!empty($data['category'])) {
@@ -369,6 +378,7 @@ SQL;
     {
         $config = $this->getOpenCartConfig();
         $prefix = $config['db_prefix'];
+        $languageId = LanguageHelper::getDefaultLanguageId($db, $config);
 
         // If category is numeric, assume it's an ID
         if (is_numeric($category)) {
@@ -376,7 +386,7 @@ SQL;
         } else {
             // Search by name
             $sql = "SELECT cd.category_id FROM {$prefix}category_description cd 
-                    WHERE cd.name = '" . $db->escape($category) . "'";
+                    WHERE cd.language_id = {$languageId} AND cd.name = '" . $db->escape($category) . "'";
         }
 
         $result = $db->query($sql);
@@ -425,5 +435,28 @@ SQL;
                 );
                 break;
         }
+    }
+
+    /**
+     * @param mixed $status
+     * @return string|null
+     */
+    private function normaliseStatus($status)
+    {
+        if ($status === null) {
+            return null;
+        }
+
+        $normalised = strtolower(trim((string) $status));
+
+        if (in_array($normalised, ['1', 'true', 'enabled'], true)) {
+            return 'enabled';
+        }
+
+        if (in_array($normalised, ['0', 'false', 'disabled'], true)) {
+            return 'disabled';
+        }
+
+        return $normalised;
     }
 }

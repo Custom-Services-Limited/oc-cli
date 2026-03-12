@@ -94,7 +94,7 @@ class VersionCommand extends Command
             'os' => php_uname('s') . ' ' . php_uname('r'),
         ];
 
-        $openCartVersion = $this->getOpenCartVersion();
+        $openCartVersion = parent::getOpenCartVersion();
         if ($openCartVersion) {
             $versions['opencart'] = $openCartVersion;
         } else {
@@ -103,62 +103,6 @@ class VersionCommand extends Command
 
         return $versions;
     }
-
-    /**
-     * Get OpenCart version
-     *
-     * @return string|null
-     */
-    protected function getOpenCartVersion()
-    {
-        if (!$this->openCartRoot) {
-            return null;
-        }
-
-        $versionFile = $this->openCartRoot . '/system/startup.php';
-        if (file_exists($versionFile)) {
-            $content = file_get_contents($versionFile);
-
-            if (preg_match("/define\s*\(\s*['\"]VERSION['\"],\s*['\"]([^'\"]+)['\"]\s*\)/", $content, $matches)) {
-                return $matches[1];
-            }
-        }
-
-        $indexFile = $this->openCartRoot . '/index.php';
-        if (file_exists($indexFile)) {
-            $content = file_get_contents($indexFile);
-
-            if (preg_match("/define\s*\(\s*['\"]VERSION['\"],\s*['\"]([^'\"]+)['\"]\s*\)/", $content, $matches)) {
-                return $matches[1];
-            }
-        }
-
-        $configDirs = [
-            $this->openCartRoot . '/system/config',
-            $this->openCartRoot . '/admin/config'
-        ];
-
-        foreach ($configDirs as $dir) {
-            if (is_dir($dir)) {
-                $files = glob($dir . '/*.php');
-                foreach ($files as $file) {
-                    $content = file_get_contents($file);
-                    if (
-                        preg_match(
-                            "/define\s*\(\s*['\"]VERSION['\"],\s*['\"]([^'\"]+)['\"]\s*\)/",
-                            $content,
-                            $matches
-                        )
-                    ) {
-                        return $matches[1];
-                    }
-                }
-            }
-        }
-
-        return null;
-    }
-
     /**
      * Display version information as a table
      *

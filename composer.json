@@ -13,7 +13,7 @@
         }
     ],
     "require": {
-        "php": "^7.3|^8.0",
+        "php": "^7.4|^8.0",
         "symfony/console": "^4.4|^5.4",
         "symfony/yaml": "^4.4|^5.4",
         "symfony/filesystem": "^4.4|^5.4",
@@ -41,18 +41,19 @@
     ],
     "config": {
         "platform": {
-            "php": "7.3"
+            "php": "7.4"
         },
         "sort-packages": true
     },
     "minimum-stability": "stable",
     "prefer-stable": true,
     "scripts": {
-        "test": "./vendor/bin/phpunit",
+        "test": "./vendor/bin/phpunit --testsuite all",
         "test:unit": "./vendor/bin/phpunit tests/Unit",
         "test:integration": "./vendor/bin/phpunit tests/Integration",
-        "test:coverage": "./vendor/bin/phpunit --coverage-html build/coverage",
-        "test:ci": "./vendor/bin/phpunit --coverage-clover build/clover.xml",
+        "test:e2e": "bash scripts/e2e/run.sh",
+        "test:coverage": "./vendor/bin/phpunit --testsuite all --coverage-html build/coverage",
+        "test:ci": "./vendor/bin/phpunit --testsuite all --coverage-clover build/clover.xml",
         "cs-check": "./vendor/bin/phpcs --standard=PSR12 src/ tests/",
         "cs-fix": "./vendor/bin/phpcbf --standard=PSR12 src/ tests/",
         "analyze": "./vendor/bin/phpstan analyse src/",
@@ -60,10 +61,11 @@
             "@php -d phar.readonly=0 box.phar compile --config=box.json"
         ],
         "ready-for-deploy": [
-            "./vendor/bin/phpunit",
+            "./vendor/bin/phpunit --testsuite all",
             "./vendor/bin/phpcbf --standard=PSR12 src/ tests/",
             "./vendor/bin/phpcs --standard=PSR12 src/ tests/",
-            "./vendor/bin/phpstan analyse src/"
+            "./vendor/bin/phpstan analyse src/",
+            "@test:e2e"
         ]
     }
 }

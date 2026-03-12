@@ -13,6 +13,7 @@
 namespace OpenCart\CLI\Commands\Extension;
 
 use OpenCart\CLI\Command;
+use OpenCart\CLI\Support\ExtensionHelper;
 use Symfony\Component\Console\Input\InputArgument;
 
 class EnableCommand extends Command
@@ -23,11 +24,11 @@ class EnableCommand extends Command
 
         $this
             ->setName('extension:enable')
-            ->setDescription('Enable an extension')
+            ->setDescription('Enable an extension entry in the extension table')
             ->addArgument(
                 'extension',
                 InputArgument::REQUIRED,
-                'Extension code or name to enable'
+                'Extension identifier. Use type:code for disabled extensions.'
             );
     }
 
@@ -43,103 +44,47 @@ class EnableCommand extends Command
             return 1;
         }
 
-        $extensionIdentifier = $this->input->getArgument('extension');
-
-        // Find the extension
-        $extension = $this->findExtension($db, $extensionIdentifier);
-        if (!$extension) {
-            $this->io->error("Extension '{$extensionIdentifier}' not found.");
+        $config = $this->getOpenCartConfig();
+        $table = $config['db_prefix'] . 'extension';
+        if (!$this->tableExists($db, $table)) {
+            $this->io->error('The extension table is not available for this OpenCart installation.');
             return 1;
         }
 
-        // Check if already enabled
-        if ($this->isExtensionEnabled($db, $extension)) {
-            $this->io->warning("Extension '{$extension['name']}' is already enabled.");
+        $identifier = $this->input->getArgument('extension');
+        $target = ExtensionHelper::resolveTypeAndCode($db, $table, $identifier);
+        if ($target === null) {
+            $this->io->error("Extension '{$identifier}' could not be resolved. Use type:code for disabled extensions.");
+            return 1;
+        }
+
+        if ($this->extensionExists($db, $table, $target['type'], $target['code'])) {
+            $this->io->warning("Extension '{$target['type']}:{$target['code']}' is already enabled.");
             return 0;
         }
 
-        $this->io->title('Enabling Extension');
-        $this->io->text("Extension: {$extension['name']} ({$extension['code']})");
+        $db->query(
+            "INSERT INTO {$table} (type, code) VALUES ('" .
+            $db->escape($target['type']) . "', '" . $db->escape($target['code']) . "')"
+        );
 
-        try {
-            if ($this->enableExtension($db, $extension)) {
-                $this->io->success("Extension '{$extension['name']}' enabled successfully.");
-            } else {
-                $this->io->error("Failed to enable extension '{$extension['name']}'.");
-                return 1;
-            }
-        } catch (\Exception $e) {
-            $this->io->error("Enable failed: " . $e->getMessage());
+        if ($db->countAffected() < 1) {
+            $this->io->error("Failed to enable extension '{$target['type']}:{$target['code']}'.");
             return 1;
         }
+
+        $this->io->success("Extension '{$target['type']}:{$target['code']}' enabled successfully.");
 
         return 0;
     }
 
-    private function findExtension($db, $identifier)
+    private function extensionExists($db, $table, $type, $code)
     {
-        $config = $this->getOpenCartConfig();
-        $prefix = $config['db_prefix'];
-
-        // Search by code or name
-        $sql = "
-            SELECT 
-                ei.extension_install_id,
-                ei.type,
-                ei.code,
-                ei.name,
-                ei.version,
-                ei.author
-            FROM {$prefix}extension_install ei
-            WHERE ei.code = '" . $db->escape($identifier) . "' OR ei.name = '" . $db->escape($identifier) . "'
-            LIMIT 1
-        ";
-
-        $result = $db->query($sql);
-
-        return $result && $result->num_rows ? $result->row : null;
-    }
-
-    private function isExtensionEnabled($db, $extension)
-    {
-        $config = $this->getOpenCartConfig();
-        $prefix = $config['db_prefix'];
-
-        $extensionInstallId = (int)$extension['extension_install_id'];
-        $extensionCode = $db->escape($extension['code']);
-
-        $sql = "
-            SELECT extension_id 
-            FROM {$prefix}extension 
-            WHERE extension_install_id = {$extensionInstallId} AND code = '{$extensionCode}'
-        ";
-
-        $result = $db->query($sql);
+        $result = $db->query(
+            "SELECT extension_id FROM {$table} WHERE type = '" . $db->escape($type) .
+            "' AND code = '" . $db->escape($code) . "' LIMIT 1"
+        );
 
         return $result && $result->num_rows > 0;
-    }
-
-    private function enableExtension($db, $extension)
-    {
-        $config = $this->getOpenCartConfig();
-        $prefix = $config['db_prefix'];
-
-        // Insert into extension table to enable
-        $extensionInstallId = (int)$extension['extension_install_id'];
-        $extensionType = $db->escape($extension['type']);
-        $extensionCode = $db->escape($extension['code']);
-
-        $sql = "
-            INSERT INTO {$prefix}extension (extension_install_id, type, code) 
-            VALUES (
-                {$extensionInstallId},
-                '{$extensionType}',
-                '{$extensionCode}'
-            )
-        ";
-
-        $db->query($sql);
-
-        return $db->countAffected() > 0;
     }
 }

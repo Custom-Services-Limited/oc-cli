@@ -27,7 +27,10 @@ class ExtensionInstallCommandTest extends TestCase
 
     public function testExtensionInstallCommandDescription()
     {
-        $this->assertEquals('Install an extension', $this->command->getDescription());
+        $this->assertEquals(
+            'Import an OCMOD XML package into the modification table',
+            $this->command->getDescription()
+        );
     }
 
     public function testExtensionInstallCommandArguments()
@@ -127,7 +130,10 @@ class ExtensionInstallCommandTest extends TestCase
         $extensionArg = $definition->getArgument('extension');
 
         $this->assertTrue($extensionArg->isRequired());
-        $this->assertEquals('Extension file path or identifier', $extensionArg->getDescription());
+        $this->assertEquals(
+            'Path to an OCMOD XML or .ocmod file',
+            $extensionArg->getDescription()
+        );
     }
 
     public function testExtensionInstallCommandOptionShortcuts()

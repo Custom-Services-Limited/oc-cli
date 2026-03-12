@@ -24,17 +24,17 @@ class InstallCommand extends Command
 
         $this
             ->setName('extension:install')
-            ->setDescription('Install an extension')
+            ->setDescription('Import an OCMOD XML package into the modification table')
             ->addArgument(
                 'extension',
                 InputArgument::REQUIRED,
-                'Extension file path or identifier'
+                'Path to an OCMOD XML or .ocmod file'
             )
             ->addOption(
                 'activate',
                 'a',
                 InputOption::VALUE_NONE,
-                'Activate extension after installation'
+                'Enable the imported modification immediately'
             );
     }
 
@@ -50,51 +50,46 @@ class InstallCommand extends Command
             return 1;
         }
 
-        $extensionPath = $this->input->getArgument('extension');
-        $activate = $this->input->getOption('activate');
+        $config = $this->getOpenCartConfig();
+        $table = $config['db_prefix'] . 'modification';
+        if (!$this->tableExists($db, $table)) {
+            $version = $this->getOpenCartVersion();
+            $message = 'The modification table is not available for this OpenCart installation.';
 
-        // Check OpenCart version for OCMOD compatibility
-        $version = $this->getOpenCartVersion();
-        if ($this->isOpenCart4($version)) {
-            $this->io->warning('Extension installation is not fully supported for OpenCart 4.');
-            $this->io->text('This feature is designed for OpenCart 3 with OCMOD support.');
-
-            if (!$this->io->confirm('Continue anyway?', false)) {
-                return 0;
+            if ($version && version_compare($version, '4.0.0', '>=')) {
+                $message .= ' OpenCart 4 package import is not supported in this v1 stabilization pass.';
             }
-        }
 
-        // Validate extension file
-        if (!$this->validateExtensionFile($extensionPath)) {
+            $this->io->error($message);
             return 1;
         }
 
-        $this->io->title('Installing Extension');
-        $this->io->text("Extension: {$extensionPath}");
+        $packagePath = $this->input->getArgument('extension');
+        if (!$this->validateExtensionFile($packagePath)) {
+            return 1;
+        }
 
         try {
-            $extensionData = $this->extractExtensionData($extensionPath);
-            $installId = $this->installExtension($db, $extensionData);
-
-            if ($installId) {
-                $this->io->success("Extension '{$extensionData['name']}' installed successfully.");
-
-                if ($activate) {
-                    $this->io->text('Activating extension...');
-                    if ($this->activateExtension($db, $installId, $extensionData)) {
-                        $this->io->success('Extension activated successfully.');
-                    } else {
-                        $this->io->warning('Extension installed but activation failed.');
-                    }
-                }
-            } else {
-                $this->io->error('Extension installation failed.');
-                return 1;
-            }
+            $modification = $this->extractModificationData($packagePath);
+            $modificationId = $this->installModification(
+                $db,
+                $table,
+                $modification,
+                $this->input->getOption('activate')
+            );
         } catch (\Exception $e) {
-            $this->io->error("Installation failed: " . $e->getMessage());
+            $this->io->error('Import failed: ' . $e->getMessage());
             return 1;
         }
+
+        $this->io->success(
+            sprintf(
+                "Imported modification '%s' (ID: %d)%s.",
+                $modification['name'],
+                $modificationId,
+                $this->input->getOption('activate') ? ' and enabled it' : ''
+            )
+        );
 
         return 0;
     }
@@ -111,171 +106,69 @@ class InstallCommand extends Command
             return false;
         }
 
-        $allowedExtensions = ['zip', 'ocmod', 'xml'];
+        $allowedExtensions = ['xml', 'ocmod'];
         $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
 
-        if (!in_array($extension, $allowedExtensions)) {
-            $this->io->error("Unsupported extension file type. Allowed: " . implode(', ', $allowedExtensions));
+        if (!in_array($extension, $allowedExtensions, true)) {
+            $this->io->error('Only OCMOD XML imports are supported in v1. Use .xml or .ocmod files.');
             return false;
         }
 
         return true;
     }
 
-    private function extractExtensionData($path)
+    private function extractModificationData($path)
     {
-        $filename = basename($path);
-        $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+        $xmlContent = file_get_contents($path);
+        if ($xmlContent === false) {
+            throw new \RuntimeException('Could not read the modification file.');
+        }
 
-        // Basic extension data - in a real implementation, this would parse
-        // the extension file to extract metadata
-        $data = [
-            'name' => pathinfo($filename, PATHINFO_FILENAME),
-            'code' => preg_replace('/[^a-z0-9_]/', '_', strtolower(pathinfo($filename, PATHINFO_FILENAME))),
-            'type' => 'module', // Default type
-            'version' => '1.0.0',
-            'author' => 'Unknown',
-            'filename' => $filename,
-            'path' => $path
+        $xml = simplexml_load_string($xmlContent);
+        if ($xml === false) {
+            throw new \RuntimeException('The supplied file is not valid XML.');
+        }
+
+        $name = trim((string) $xml->name);
+        if ($name === '') {
+            $name = pathinfo(basename($path), PATHINFO_FILENAME);
+        }
+
+        $code = trim((string) $xml->code);
+        if ($code === '') {
+            $code = preg_replace('/[^a-z0-9_]/', '_', strtolower($name));
+        }
+
+        return [
+            'name' => $name,
+            'code' => $code,
+            'author' => trim((string) $xml->author) ?: 'Unknown',
+            'version' => trim((string) $xml->version) ?: '1.0.0',
+            'link' => trim((string) $xml->link),
+            'xml' => $xmlContent,
         ];
-
-        // For OCMOD files, try to extract XML metadata
-        if ($extension === 'xml' || $extension === 'ocmod') {
-            $xmlData = $this->parseOcmodXml($path);
-            if ($xmlData) {
-                $data = array_merge($data, $xmlData);
-            }
-        }
-
-        return $data;
     }
 
-    private function parseOcmodXml($path)
+    private function installModification($db, $table, array $modification, $activate)
     {
-        try {
-            $xml = simplexml_load_file($path);
-            if ($xml === false) {
-                return null;
-            }
-
-            return [
-                'name' => (string)$xml->name ?: 'Unknown Extension',
-                'code' => (string)$xml->code ?: preg_replace('/[^a-z0-9_]/', '_', strtolower((string)$xml->name)),
-                'version' => (string)$xml->version ?: '1.0.0',
-                'author' => (string)$xml->author ?: 'Unknown'
-            ];
-        } catch (\Exception $e) {
-            $this->io->warning("Could not parse OCMOD XML: " . $e->getMessage());
-            return null;
-        }
-    }
-
-    private function installExtension($db, $data)
-    {
-        $config = $this->getOpenCartConfig();
-        $prefix = $config['db_prefix'];
-
-        // Check if extension is already installed
-        $extensionCode = $db->escape($data['code']);
-        $checkSql = "SELECT extension_install_id FROM {$prefix}extension_install WHERE code = '{$extensionCode}'";
-        $result = $db->query($checkSql);
-
-        if ($result && $result->num_rows) {
-            throw new \Exception("Extension '{$data['code']}' is already installed.");
+        $code = $db->escape($modification['code']);
+        $existing = $db->query("SELECT modification_id FROM {$table} WHERE code = '{$code}' LIMIT 1");
+        if ($existing && $existing->num_rows > 0) {
+            throw new \RuntimeException("A modification with code '{$modification['code']}' is already installed.");
         }
 
-        // Insert into extension_install table
-        $values = [
-            $db->escape($data['type']),
-            $extensionCode,
-            $db->escape($data['name']),
-            $db->escape($data['version']),
-            $db->escape($data['author']),
-            $db->escape($data['filename']),
-        ];
-
-        $insertSql = <<<SQL
-INSERT INTO {$prefix}extension_install (
-    type,
-    code,
-    name,
-    version,
-    author,
-    filename,
-    date_added
-) VALUES (
-    '{$values[0]}',
-    '{$values[1]}',
-    '{$values[2]}',
-    '{$values[3]}',
-    '{$values[4]}',
-    '{$values[5]}',
-    NOW()
-)
-SQL;
-
-        $db->query($insertSql);
-
-        $installId = $db->getLastId();
-
-        // Add to extension_path table if applicable
-        $this->addExtensionPath($db, $installId, $data);
-
-        return $installId;
-    }
-
-    private function addExtensionPath($db, $installId, $data)
-    {
-        $config = $this->getOpenCartConfig();
-        $prefix = $config['db_prefix'];
-
+        $status = $activate ? 1 : 0;
         $db->query(
-            "INSERT INTO {$prefix}extension_path (extension_install_id, path) VALUES (" .
-            (int)$installId . ", '" . $db->escape($data['path']) . "')"
-        );
-    }
-
-    private function activateExtension($db, $installId, $data)
-    {
-        $config = $this->getOpenCartConfig();
-        $prefix = $config['db_prefix'];
-
-        // Add to extension table to activate
-        $db->query(
-            "INSERT INTO {$prefix}extension (extension_install_id, type, code) VALUES (" .
-            (int)$installId . ", '" . $db->escape($data['type']) . "', '" . $db->escape($data['code']) . "')"
+            "INSERT INTO {$table} (name, code, author, version, link, xml, status, date_added) VALUES (" .
+            "'" . $db->escape($modification['name']) . "', " .
+            "'{$code}', " .
+            "'" . $db->escape($modification['author']) . "', " .
+            "'" . $db->escape($modification['version']) . "', " .
+            "'" . $db->escape($modification['link']) . "', " .
+            "'" . $db->escape($modification['xml']) . "', " .
+            "{$status}, NOW())"
         );
 
-        return $db->countAffected() > 0;
-    }
-
-    private function getOpenCartVersion()
-    {
-        if (!$this->openCartRoot) {
-            return null;
-        }
-
-        // Try to get version from various locations
-        $versionFiles = [
-            $this->openCartRoot . '/system/startup.php',
-            $this->openCartRoot . '/admin/model/setting/setting.php',
-            $this->openCartRoot . '/index.php'
-        ];
-
-        foreach ($versionFiles as $file) {
-            if (file_exists($file)) {
-                $content = file_get_contents($file);
-                if (preg_match("/VERSION['\"]?\s*[=:]\s*['\"]([0-9\.]+)/i", $content, $matches)) {
-                    return $matches[1];
-                }
-            }
-        }
-
-        return null;
-    }
-
-    private function isOpenCart4($version)
-    {
-        return $version && version_compare($version, '4.0.0', '>=');
+        return $db->getLastId();
     }
 }

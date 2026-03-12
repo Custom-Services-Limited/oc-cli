@@ -17,8 +17,12 @@
     <testsuite name="integration">
       <directory>tests/Integration</directory>
     </testsuite>
+    <testsuite name="e2e">
+      <directory>tests/E2E</directory>
+    </testsuite>
     <testsuite name="all">
       <directory>tests</directory>
+      <exclude>tests/E2E</exclude>
     </testsuite>
   </testsuites>
   <logging>

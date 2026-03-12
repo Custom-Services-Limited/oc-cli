@@ -77,6 +77,11 @@ class ListCommand extends Command
         $limit = (int)$this->input->getOption('limit');
         $search = $this->input->getOption('search');
 
+        if (!in_array($status, ['enabled', 'disabled', 'all'], true)) {
+            $this->io->error('Status must be one of: enabled, disabled, all.');
+            return 1;
+        }
+
         $products = $this->getProducts($db, $category, $status, $limit, $search);
 
         if (empty($products)) {

@@ -48,10 +48,19 @@ class ExtensionCommandsTest extends TestCase
         $extensionDisable = $this->application->find('extension:disable');
         $modificationList = $this->application->find('modification:list');
 
-        $this->assertEquals('List installed extensions', $extensionList->getDescription());
-        $this->assertEquals('Install an extension', $extensionInstall->getDescription());
-        $this->assertEquals('Enable an extension', $extensionEnable->getDescription());
-        $this->assertEquals('Disable an extension', $extensionDisable->getDescription());
+        $this->assertEquals('List enabled extensions', $extensionList->getDescription());
+        $this->assertEquals(
+            'Import an OCMOD XML package into the modification table',
+            $extensionInstall->getDescription()
+        );
+        $this->assertEquals(
+            'Enable an extension entry in the extension table',
+            $extensionEnable->getDescription()
+        );
+        $this->assertEquals(
+            'Disable an extension entry from the extension table',
+            $extensionDisable->getDescription()
+        );
         $this->assertEquals('List installed modifications', $modificationList->getDescription());
     }
 

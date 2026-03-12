@@ -99,7 +99,7 @@ class Application extends BaseApplication
      * @param OutputInterface $output
      * @return int
      */
-    public function run(InputInterface $input = null, OutputInterface $output = null): int
+    public function run(?InputInterface $input = null, ?OutputInterface $output = null): int
     {
         // In test environment, ensure we have proper input/output to prevent hanging
         if (getenv('APP_ENV') === 'testing') {

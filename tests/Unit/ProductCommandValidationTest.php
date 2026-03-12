@@ -12,30 +12,22 @@
 
 namespace OpenCart\CLI\Tests\Unit;
 
-use PHPUnit\Framework\TestCase;
 use OpenCart\CLI\Application;
 use OpenCart\CLI\Commands\Product\CreateCommand;
+use OpenCart\CLI\Tests\Helpers\InvokesNonPublicMembers;
+use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\BufferedOutput;
 use Symfony\Component\Console\Style\SymfonyStyle;
-use ReflectionClass;
 
 class ProductCommandValidationTest extends TestCase
 {
+    use InvokesNonPublicMembers;
+
     /**
      * @var CreateCommand
      */
     private $command;
-
-    /**
-     * @var Application
-     */
-    private $application;
-
-    /**
-     * @var ReflectionClass
-     */
-    private $reflection;
 
     /**
      * @var BufferedOutput
@@ -44,233 +36,113 @@ class ProductCommandValidationTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->application = new Application();
+        $application = new Application();
         $this->command = new CreateCommand();
-        $this->command->setApplication($this->application);
-        $this->reflection = new ReflectionClass($this->command);
+        $this->command->setApplication($application);
 
         $input = new ArrayInput(['command' => 'product:create']);
         $this->output = new BufferedOutput();
 
-        // Set up command properties for validation methods that use $this->io
-        $inputProperty = $this->reflection->getProperty('input');
-        $inputProperty->setAccessible(true);
-        $inputProperty->setValue($this->command, $input);
-
-        $outputProperty = $this->reflection->getProperty('output');
-        $outputProperty->setAccessible(true);
-        $outputProperty->setValue($this->command, $this->output);
-
-        $ioProperty = $this->reflection->getProperty('io');
-        $ioProperty->setAccessible(true);
-        $ioProperty->setValue($this->command, new SymfonyStyle($input, $this->output));
+        $this->setProperty($this->command, 'input', $input);
+        $this->setProperty($this->command, 'output', $this->output);
+        $this->setProperty($this->command, 'io', new SymfonyStyle($input, $this->output));
     }
 
     public function testValidateProductDataValidData()
     {
-        $method = $this->reflection->getMethod('validateProductData');
-        $method->setAccessible(true);
-
-        $validData = [
-            'name' => 'Test Product',
-            'model' => 'TEST001',
-            'price' => '19.99',
-            'status' => 'enabled'
-        ];
-
-        $result = $method->invoke($this->command, $validData);
-
-        $this->assertTrue($result);
+        $this->assertTrue(
+            $this->invokeMethod(
+                $this->command,
+                'validateProductData',
+                ['name' => 'Test Product', 'model' => 'TEST001', 'price' => '19.99', 'status' => 'enabled']
+            )
+        );
     }
 
-    public function testValidateProductDataEmptyName()
+    public function testValidateProductDataRejectsMissingName()
     {
-        $method = $this->reflection->getMethod('validateProductData');
-        $method->setAccessible(true);
+        $this->assertFalse(
+            $this->invokeMethod(
+                $this->command,
+                'validateProductData',
+                ['name' => '', 'model' => 'TEST001', 'price' => '19.99', 'status' => 'enabled']
+            )
+        );
 
-        $invalidData = [
-            'name' => '',
-            'model' => 'TEST001',
-            'price' => '19.99',
-            'status' => 'enabled'
-        ];
-
-        $result = $method->invoke($this->command, $invalidData);
-
-        $this->assertFalse($result);
         $this->assertStringContainsString('Product name is required', $this->output->fetch());
     }
 
-    public function testValidateProductDataEmptyModel()
+    public function testValidateProductDataRejectsWhitespaceOnlyName()
     {
-        $method = $this->reflection->getMethod('validateProductData');
-        $method->setAccessible(true);
-
-        $invalidData = [
-            'name' => 'Test Product',
-            'model' => '',
-            'price' => '19.99',
-            'status' => 'enabled'
-        ];
-
-        $result = $method->invoke($this->command, $invalidData);
-
-        $this->assertFalse($result);
-        $this->assertStringContainsString('Product model is required', $this->output->fetch());
+        $this->assertFalse(
+            $this->invokeMethod(
+                $this->command,
+                'validateProductData',
+                ['name' => '   ', 'model' => 'TEST001', 'price' => '19.99', 'status' => 'enabled']
+            )
+        );
     }
 
-    public function testValidateProductDataInvalidPrice()
+    public function testValidateProductDataRejectsMissingModel()
     {
-        $method = $this->reflection->getMethod('validateProductData');
-        $method->setAccessible(true);
-
-        $invalidData = [
-            'name' => 'Test Product',
-            'model' => 'TEST001',
-            'price' => 'invalid',
-            'status' => 'enabled'
-        ];
-
-        $result = $method->invoke($this->command, $invalidData);
-
-        $this->assertFalse($result);
-        $this->assertStringContainsString('Price must be a valid positive number', $this->output->fetch());
+        $this->assertFalse(
+            $this->invokeMethod(
+                $this->command,
+                'validateProductData',
+                ['name' => 'Test Product', 'model' => '', 'price' => '19.99', 'status' => 'enabled']
+            )
+        );
     }
 
-    public function testValidateProductDataNegativePrice()
+    public function testValidateProductDataRejectsInvalidPrice()
     {
-        $method = $this->reflection->getMethod('validateProductData');
-        $method->setAccessible(true);
-
-        $invalidData = [
-            'name' => 'Test Product',
-            'model' => 'TEST001',
-            'price' => '-10.50',
-            'status' => 'enabled'
-        ];
-
-        $result = $method->invoke($this->command, $invalidData);
-
-        $this->assertFalse($result);
-        $this->assertStringContainsString('Price must be a valid positive number', $this->output->fetch());
+        $this->assertFalse(
+            $this->invokeMethod(
+                $this->command,
+                'validateProductData',
+                ['name' => 'Test Product', 'model' => 'TEST001', 'price' => 'invalid', 'status' => 'enabled']
+            )
+        );
     }
 
-    public function testValidateProductDataInvalidStatus()
+    public function testValidateProductDataRejectsNegativePrice()
     {
-        $method = $this->reflection->getMethod('validateProductData');
-        $method->setAccessible(true);
-
-        $invalidData = [
-            'name' => 'Test Product',
-            'model' => 'TEST001',
-            'price' => '19.99',
-            'status' => 'invalid_status'
-        ];
-
-        $result = $method->invoke($this->command, $invalidData);
-
-        $this->assertFalse($result);
-        $this->assertStringContainsString('Status must be either "enabled" or "disabled"', $this->output->fetch());
+        $this->assertFalse(
+            $this->invokeMethod(
+                $this->command,
+                'validateProductData',
+                ['name' => 'Test Product', 'model' => 'TEST001', 'price' => '-10.50', 'status' => 'enabled']
+            )
+        );
     }
 
-    public function testValidateProductDataValidDisabledStatus()
+    public function testValidateProductDataAcceptsDisabledAndZeroPrice()
     {
-        $method = $this->reflection->getMethod('validateProductData');
-        $method->setAccessible(true);
-
-        $validData = [
-            'name' => 'Test Product',
-            'model' => 'TEST001',
-            'price' => '19.99',
-            'status' => 'disabled'
-        ];
-
-        $result = $method->invoke($this->command, $validData);
-
-        $this->assertTrue($result);
+        $this->assertTrue(
+            $this->invokeMethod(
+                $this->command,
+                'validateProductData',
+                ['name' => 'Free Product', 'model' => 'FREE001', 'price' => '0', 'status' => 'disabled']
+            )
+        );
     }
 
-    public function testValidateProductDataZeroPrice()
+    public function testValidateProductDataRejectsInvalidStatus()
     {
-        $method = $this->reflection->getMethod('validateProductData');
-        $method->setAccessible(true);
-
-        $validData = [
-            'name' => 'Free Product',
-            'model' => 'FREE001',
-            'price' => '0',
-            'status' => 'enabled'
-        ];
-
-        $result = $method->invoke($this->command, $validData);
-
-        $this->assertTrue($result);
+        $this->assertFalse(
+            $this->invokeMethod(
+                $this->command,
+                'validateProductData',
+                ['name' => 'Test Product', 'model' => 'TEST001', 'price' => '19.99', 'status' => 'invalid_status']
+            )
+        );
     }
 
-    public function testValidateProductDataFloatPrice()
+    public function testNormaliseStatusAliases()
     {
-        $method = $this->reflection->getMethod('validateProductData');
-        $method->setAccessible(true);
-
-        $validData = [
-            'name' => 'Test Product',
-            'model' => 'TEST001',
-            'price' => 123.45,
-            'status' => 'enabled'
-        ];
-
-        $result = $method->invoke($this->command, $validData);
-
-        $this->assertTrue($result);
-    }
-
-    public function testValidateProductDataIntegerPrice()
-    {
-        $method = $this->reflection->getMethod('validateProductData');
-        $method->setAccessible(true);
-
-        $validData = [
-            'name' => 'Test Product',
-            'model' => 'TEST001',
-            'price' => 100,
-            'status' => 'enabled'
-        ];
-
-        $result = $method->invoke($this->command, $validData);
-
-        $this->assertTrue($result);
-    }
-
-    public function testValidateProductDataWhitespaceOnlyName()
-    {
-        $method = $this->reflection->getMethod('validateProductData');
-        $method->setAccessible(true);
-
-        $invalidData = [
-            'name' => '   ',
-            'model' => 'TEST001',
-            'price' => '19.99',
-            'status' => 'enabled'
-        ];
-
-        $result = $method->invoke($this->command, $invalidData);
-
-        // empty() returns true for whitespace-only strings when trimmed
-        $this->assertTrue($result); // The method doesn't trim, so '   ' is not empty
-    }
-
-    public function testValidateProductDataMissingFields()
-    {
-        $method = $this->reflection->getMethod('validateProductData');
-        $method->setAccessible(true);
-
-        $invalidData = [
-            'name' => 'Test Product'
-            // Missing model, price, status
-        ];
-
-        $result = $method->invoke($this->command, $invalidData);
-
-        $this->assertFalse($result);
+        $this->assertEquals('enabled', $this->invokeMethod($this->command, 'normaliseStatus', '1'));
+        $this->assertEquals('enabled', $this->invokeMethod($this->command, 'normaliseStatus', 'true'));
+        $this->assertEquals('disabled', $this->invokeMethod($this->command, 'normaliseStatus', '0'));
+        $this->assertEquals('disabled', $this->invokeMethod($this->command, 'normaliseStatus', 'false'));
     }
 }

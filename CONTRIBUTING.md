@@ -8,7 +8,7 @@ Thank you for your interest in contributing to OC-CLI! This document provides gu
 
 ### Prerequisites
 
-- PHP 7.0 or higher
+- PHP 7.4 or higher
 - Composer
 - Git
 - OpenCart installation (for testing)
@@ -41,6 +41,9 @@ OC-CLI has a comprehensive testing suite. All contributions must include appropr
 ```bash
 # Run all tests
 composer test
+
+# Run the real OpenCart 3.0.5.0 end-to-end harness
+composer test:e2e
 
 # Run only unit tests
 composer test:unit

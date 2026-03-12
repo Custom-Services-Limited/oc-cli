@@ -235,6 +235,10 @@ abstract class Command extends BaseCommand
      */
     protected function extractConfigValue($content, $constant)
     {
+        $content = preg_replace('!/\*.*?\*/!s', '', $content);
+        $content = preg_replace('/^\s*\/\/.*$/m', '', (string) $content);
+        $content = preg_replace('/^\s*#.*$/m', '', (string) $content);
+
         // Match define('CONSTANT', 'value') or define("CONSTANT", "value")
         $pattern = '/define\s*\(\s*[\'"]' . preg_quote($constant, '/') . '[\'"]\s*,\s*[\'"]([^\'"]*)[\'"\s]*\)/i';
 
@@ -357,6 +361,86 @@ abstract class Command extends BaseCommand
         return $this->input
             && $this->input->hasOption('db-host')
             && $this->input->getOption('db-host');
+    }
+
+    /**
+     * Detect the OpenCart version from the resolved installation root.
+     *
+     * @return string|null
+     */
+    protected function getOpenCartVersion()
+    {
+        if (!$this->openCartRoot) {
+            return null;
+        }
+
+        $versionFiles = [
+            $this->openCartRoot . '/system/startup.php',
+            $this->openCartRoot . '/index.php',
+        ];
+
+        foreach ($versionFiles as $file) {
+            if (!file_exists($file)) {
+                continue;
+            }
+
+            $content = file_get_contents($file);
+            if ($content === false) {
+                continue;
+            }
+
+            if (preg_match("/define\s*\(\s*['\"]VERSION['\"],\s*['\"]([^'\"]+)['\"]\s*\)/", $content, $matches)) {
+                return $matches[1];
+            }
+        }
+
+        $configDirs = [
+            $this->openCartRoot . '/system/config',
+            $this->openCartRoot . '/admin/config',
+        ];
+
+        foreach ($configDirs as $dir) {
+            if (!is_dir($dir)) {
+                continue;
+            }
+
+            $files = glob($dir . '/*.php');
+            if ($files === false) {
+                continue;
+            }
+
+            foreach ($files as $file) {
+                $content = file_get_contents($file);
+                if ($content === false) {
+                    continue;
+                }
+
+                if (preg_match("/define\s*\(\s*['\"]VERSION['\"],\s*['\"]([^'\"]+)['\"]\s*\)/", $content, $matches)) {
+                    return $matches[1];
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Check whether a database table exists for the current connection.
+     *
+     * @param object $db
+     * @param string $table
+     * @return bool
+     */
+    protected function tableExists($db, $table)
+    {
+        try {
+            $escapedTable = $db->escape($table);
+            $result = $db->query("SHOW TABLES LIKE '{$escapedTable}'");
+        } catch (\Exception $e) {
+            return false;
+        }
+
+        return (bool) ($result && !empty($result->rows));
     }
 
     /**

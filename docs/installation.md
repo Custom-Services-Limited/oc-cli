@@ -1,143 +1,107 @@
 # Installation Guide
 
-This guide covers different methods to install OC-CLI on your system.
+## Requirements
 
-**OC-CLI is created and maintained by [Custom Services Limited](https://support.opencartgreece.gr/) - Your OpenCart experts.**
+- PHP 7.4 or newer
+- Composer
+- MySQLi-enabled PHP runtime
+- An OpenCart installation or direct DB credentials
 
-## System Requirements
+## Install methods
 
-- PHP 7.0 or higher
-- OpenCart 2.x, 3.x, or 4.x installation
-- MySQL/MySQLi extension for PHP
-- Composer (recommended for installation)
-
-## Installation Methods
-
-### Method 1: Composer Global Installation (Recommended)
-
-This is the easiest way to install OC-CLI and makes it available system-wide.
+Global Composer install:
 
 ```bash
 composer global require custom-services-limited/oc-cli
 ```
 
-Make sure your global Composer vendor binaries directory is in your PATH. You can check this with:
+Project-local install:
 
 ```bash
-composer global config bin-dir --absolute
-```
-
-Add the returned path to your shell's PATH if it's not already there.
-
-### Method 2: Per-Project Installation
-
-Install OC-CLI as a development dependency in your OpenCart project:
-
-```bash
-cd /path/to/your/opencart
+cd /path/to/project
 composer require --dev custom-services-limited/oc-cli
 ```
 
-Then run commands using:
+Run the local binary:
 
 ```bash
-./vendor/bin/oc command:name
+./vendor/bin/oc list
 ```
 
-### Method 3: Manual Installation
+Manual install from this repository:
 
-1. Clone the repository:
 ```bash
 git clone https://github.com/Custom-Services-Limited/oc-cli.git
 cd oc-cli
-```
-
-2. Install dependencies:
-```bash
 composer install
-```
-
-3. Make the binary executable:
-```bash
 chmod +x bin/oc
 ```
 
-4. (Optional) Add to your PATH:
-```bash
-echo 'export PATH="$PATH:'$(pwd)'/bin"' >> ~/.bashrc
-source ~/.bashrc
-```
-
-### Method 4: Download Phar (Coming Soon)
-
-We plan to provide a downloadable Phar file for easy installation without Composer.
-
-## Verification
-
-After installation, verify that OC-CLI is working correctly:
+## Verify the binary
 
 ```bash
-oc --version
+php bin/oc list --raw
 ```
 
-You should see output similar to:
-```
-OC-CLI version 1.0.0
-```
+Typical first checks:
 
-## First Steps
-
-1. Navigate to your OpenCart installation:
 ```bash
-cd /path/to/your/opencart
+php bin/oc core:version
+php bin/oc core:check-requirements
 ```
 
-2. Check if OC-CLI detects your installation:
+## How connection discovery works
+
+OC-CLI supports two connection modes.
+
+OpenCart-root discovery:
+
 ```bash
+cd /path/to/opencart
 oc core:version
 ```
 
-3. List all available commands:
+Direct database flags:
+
 ```bash
-oc list
+oc db:info \
+  --db-host=localhost \
+  --db-user=oc_user \
+  --db-pass=secret \
+  --db-name=opencart \
+  --db-prefix=oc_
 ```
+
+Available DB flags:
+
+- `--db-host`
+- `--db-user`
+- `--db-pass`
+- `--db-name`
+- `--db-port`
+- `--db-prefix`
+- `--db-driver`
 
 ## Troubleshooting
 
-### Command Not Found
+If `oc` is not found:
 
-If you get a "command not found" error:
+- Check Composer's global bin dir with `composer global config bin-dir --absolute`.
+- Use the full path to the installed binary.
+- For repo-local use, run `php bin/oc ...`.
 
-1. Check that Composer's global bin directory is in your PATH
-2. Try running with the full path: `/path/to/composer/vendor/bin/oc`
-3. For manual installation, check that the `bin/oc` file is executable
+If OpenCart is not detected:
 
-### PHP Version Issues
+- Run from the OpenCart root, or pass `--opencart-root=/path/to/store`.
+- Verify that `config.php` and the standard OpenCart directories are readable.
 
-If you get PHP version errors:
+If database connection fails:
 
-1. Check your PHP version: `php --version`
-2. Ensure you have PHP 7.0 or higher
-3. On some systems, you might need to use `php7` or `php8` instead of `php`
+- Check the credentials in `config.php`, or pass direct DB flags.
+- Confirm the PHP MySQLi extension is available.
 
-### OpenCart Detection Issues
+## Current limitations
 
-If OC-CLI cannot detect your OpenCart installation:
-
-1. Make sure you're in the OpenCart root directory
-2. Check that essential files exist: `config.php`, `system/startup.php`
-3. Verify file permissions allow reading these files
-
-### Database Connection Issues
-
-If you get database connection errors:
-
-1. Check your `config.php` file for correct database credentials
-2. Ensure your database server is running
-3. Verify that the PHP MySQLi extension is installed
-
-## Next Steps
-
-- Read the [Commands Reference](commands.md) to learn about available commands
-- Check out [Usage Examples](examples.md) for common tasks
-- See [Development Guide](development.md) if you want to contribute
+- There is no `.oc-cli.yml` runtime configuration file in v1.
+- `extension:install` only imports OCMOD XML into the modification table.
+- `core:config --admin` is deprecated and has no effect.
