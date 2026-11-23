@@ -16,12 +16,12 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    env:
+      PACKAGIST_USERNAME: ${{ secrets.PACKAGIST_USERNAME }}
+      PACKAGIST_API_TOKEN: ${{ secrets.PACKAGIST_API_TOKEN }}
     steps:
       - name: Trigger Packagist webhook
-        if: ${{ secrets.PACKAGIST_USERNAME != '' && secrets.PACKAGIST_API_TOKEN != '' }}
-        env:
-          PACKAGIST_USERNAME: ${{ secrets.PACKAGIST_USERNAME }}
-          PACKAGIST_API_TOKEN: ${{ secrets.PACKAGIST_API_TOKEN }}
+        if: ${{ env.PACKAGIST_USERNAME != '' && env.PACKAGIST_API_TOKEN != '' }}
         run: |
           RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
             -X POST \
@@ -33,5 +33,5 @@ jobs:
             exit 1
           fi
       - name: Skip Packagist update (missing secrets)
-        if: ${{ secrets.PACKAGIST_USERNAME == '' || secrets.PACKAGIST_API_TOKEN == '' }}
+        if: ${{ env.PACKAGIST_USERNAME == '' || env.PACKAGIST_API_TOKEN == '' }}
         run: echo "Packagist update skipped because secrets are not configured."
