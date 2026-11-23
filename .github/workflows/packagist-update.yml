@@ -3,6 +3,9 @@ name: Packagist Update
 on:
   push:
     branches: [ main ]
+  workflow_run:
+    workflows: [ Release ]
+    types: [ completed ]
   workflow_dispatch:
   schedule:
     - cron: '0 3 * * *'
