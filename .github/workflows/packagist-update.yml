@@ -26,7 +26,7 @@ jobs:
           RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
             -X POST \
             -H "Content-Type: application/json" \
-            -d '{"package":{"name":"custom-services-limited/oc-cli"}}' \
+            -d '{"repository":{"url":"https://packagist.org/packages/custom-services-limited/oc-cli"}}' \
             "https://packagist.org/api/update-package?username=${PACKAGIST_USERNAME}&apiToken=${PACKAGIST_API_TOKEN}")
           if [ "$RESPONSE" -ge 400 ]; then
             echo "Packagist update failed with status $RESPONSE"
