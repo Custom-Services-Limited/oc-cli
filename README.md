@@ -2,7 +2,7 @@
 
 OC-CLI is a Symfony Console CLI for OpenCart. The current workspace ships a stable command surface for store inspection, configuration, database operations, extensions, modifications, products, categories, orders, cache maintenance, and admin-user management.
 
-Created by [Custom Services Limited](https://support.opencartgreece.gr/).
+Created by [Custom Services Limited](https://support.opencartgreece.gr/), the team behind [OpenCart Greece](https://www.opencartgreece.gr/).
 
 ## Stable command surface
 
